@@ -271,7 +271,10 @@ canvas#scene {
   z-index: 40;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
   gap: 8px;
+  max-width: calc(100vw - 60px);
 }
 #tools .sep {
   width: 1px;
@@ -419,6 +422,127 @@ canvas#scene {
 
 #info-desc {
   padding-bottom: 4px;
+}
+
+/* ---------------- 导览 ---------------- */
+#tour {
+  position: fixed;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 48px));
+  z-index: 60;
+  background: linear-gradient(160deg, rgba(24, 19, 14, 0.95), rgba(12, 10, 7, 0.97));
+  border: 1px solid var(--gold-line);
+  border-top: 2px solid var(--gold);
+  padding: 18px 22px 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+#tour[hidden] { display: none; }
+.tour-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: rgba(217, 182, 97, 0.8);
+}
+#tour-idx { font-variant-numeric: tabular-nums; }
+#tour-title {
+  margin: 9px 0 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 23px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: #fbf4e4;
+}
+#tour-text {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.95;
+  letter-spacing: 0.02em;
+  color: rgba(242, 234, 217, 0.76);
+  text-align: justify;
+}
+.tour-track {
+  height: 2px;
+  margin-top: 14px;
+  background: rgba(217, 182, 97, 0.16);
+}
+.tour-track i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--gold);
+  transition: width 0.5s ease;
+}
+.tour-ctrl {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.tour-ctrl button {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--paper-dim);
+  background: transparent;
+  border: 1px solid rgba(217, 182, 97, 0.3);
+  border-radius: 2px;
+  padding: 6px 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tour-ctrl button:hover {
+  color: var(--ink);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+#tour-exit { margin-left: auto; }
+
+/* ---------------- 提示条 ---------------- */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 128px;
+  transform: translate(-50%, 8px);
+  z-index: 80;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--paper);
+  background: rgba(20, 15, 10, 0.94);
+  border: 1px solid var(--gold-line);
+  padding: 9px 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s;
+}
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------------- 键盘焦点 ---------------- */
+:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 2px;
+}
+.lbl:focus-visible { outline: none; }
+.lbl:focus-visible .lbl-body {
+  border-color: var(--gold);
+  background: rgba(26, 20, 14, 0.96);
+}
+
+/* ---------------- 减少动效 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* 结构化字段：形制 / 尺度 / 现状 */
@@ -597,7 +721,14 @@ body.hide-labels #labels { display: none; }
     justify-content: center;
   }
   #views button { padding: 6px 9px; font-size: 10.5px; letter-spacing: 0.06em; }
-  #tools { bottom: 16px; left: 12px; right: 12px; justify-content: center; }
+  #tools {
+    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    justify-content: center;
+    max-width: none;
+  }
+  #time input[type="range"] { width: 78px; }
   #hint { display: none; }
   #info {
     top: auto;
@@ -616,4 +747,23 @@ body.hide-labels #labels { display: none; }
   #info-name { font-size: 22px; }
   #info-desc { font-size: 12px; line-height: 1.9; }
   #panel-toggle { display: none; }
+
+  /* 导览时收起周边控件，只留字幕条与退出 */
+  #tour {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    transform: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 16px 18px 22px;
+  }
+  body.tour-on #views,
+  body.tour-on #tools,
+  body.tour-on #hint,
+  body.tour-on #sidebar,
+  body.tour-on #info { display: none; }
+  #toast { bottom: 150px; }
 }

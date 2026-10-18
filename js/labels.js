@@ -41,10 +41,20 @@
     el.innerHTML =
       '<span class="lbl-line"></span>' +
       '<span class="lbl-body"><span class="lbl-name">' + (info.name || '') + '</span></span>';
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', (info.name || '') + GG.i18n.t('，查看详情', ', view details'));
 
     el.addEventListener('pointerdown', (e) => {
       e.stopPropagation();
       this.onSelect(entry);
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.onSelect(entry);
+      }
     });
     el.addEventListener('pointerenter', () => this.onHover(entry));
     el.addEventListener('pointerleave', () => this.onHover(null));

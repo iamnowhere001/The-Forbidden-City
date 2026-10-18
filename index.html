@@ -8,6 +8,7 @@
 <!-- 尽早安装错误浮层，脚本加载阶段的异常也要抓到 -->
 <script src="js/debug.js"></script>
 <script src="js/config.js"></script>
+<script src="js/i18n.js"></script>
 </head>
 <body>
 
@@ -27,7 +28,7 @@
 </header>
 
 <aside id="sidebar">
-  <div class="cap">宫殿索引</div>
+  <div class="cap" data-zh="宫殿索引" data-en="Palace Index">宫殿索引</div>
   <div id="list"></div>
 </aside>
 
@@ -36,26 +37,51 @@
 </nav>
 
 <div id="tools">
-  <button class="tool" id="panel-toggle" title="收起索引">☰</button>
-  <button class="tool" id="btn-labels" title="显示全部标注">标注</button>
-  <button class="tool" id="btn-rotate" title="自动旋转">旋转</button>
+  <button class="tool" id="panel-toggle" title="收起索引" aria-label="收起索引" data-title-zh="收起索引" data-title-en="Hide index">☰</button>
+  <button class="tool" id="btn-labels" title="显示全部标注" aria-label="显示全部标注" data-title-zh="显示全部标注" data-title-en="Show all labels" data-zh="标注" data-en="Labels">标注</button>
+  <button class="tool" id="btn-rotate" title="自动旋转" aria-label="自动旋转" data-title-zh="自动旋转" data-title-en="Auto-rotate" data-zh="旋转" data-en="Rotate">旋转</button>
   <div class="sep"></div>
   <div id="time" title="拖动改变日照时刻">
-    <span class="tlabel">晨</span>
+    <span class="tlabel" data-zh="晨" data-en="Dawn">晨</span>
     <input type="range" id="sun" min="0" max="100" value="50" step="1" aria-label="日照时刻">
-    <span class="tlabel">暮</span>
+    <span class="tlabel" data-zh="暮" data-en="Dusk">暮</span>
   </div>
   <div class="sep"></div>
-  <button class="tool" id="btn-reset" title="回到全景">复位</button>
+  <button class="tool" id="btn-tour" title="开始中轴导览" aria-label="开始中轴导览" data-title-zh="开始中轴导览" data-title-en="Start the guided tour" data-zh="导览" data-en="Tour">导览</button>
+  <button class="tool" id="btn-share" title="复制当前视角链接" aria-label="复制当前视角链接" data-title-zh="复制当前视角链接" data-title-en="Copy a link to this view" data-zh="分享" data-en="Share">分享</button>
+  <button class="tool" id="btn-shot" title="保存当前画面" aria-label="保存当前画面" data-title-zh="保存当前画面" data-title-en="Save this view as PNG" data-zh="存图" data-en="Save">存图</button>
+  <div class="sep"></div>
+  <button class="tool" id="btn-reset" title="回到全景" aria-label="回到全景" data-title-zh="回到全景" data-title-en="Back to overview" data-zh="复位" data-en="Reset">复位</button>
+  <button class="tool" id="btn-lang" title="切换到英文" aria-label="切换到英文">EN</button>
 </div>
 
 <div id="hint">
-  <div><b>左键</b> 旋转 · <b>滚轮</b> 缩放 · <b>右键</b> 平移</div>
-  <div>点击建筑或标注查看详情</div>
+  <div>
+    <b data-zh="左键" data-en="Drag">左键</b> <span data-zh="旋转 ·" data-en="to rotate ·">旋转 ·</span>
+    <b data-zh="滚轮" data-en="Scroll">滚轮</b> <span data-zh="缩放 ·" data-en="to zoom ·">缩放 ·</span>
+    <b data-zh="右键" data-en="Right-drag">右键</b> <span data-zh="平移" data-en="to pan">平移</span>
+  </div>
+  <div data-zh="点击建筑或标注查看详情" data-en="Click a building or label for details">点击建筑或标注查看详情</div>
 </div>
 
-<section id="info">
-  <button id="info-close">×</button>
+<section id="tour" role="region" aria-live="polite" aria-label="中轴导览" hidden>
+  <div class="tour-head">
+    <span id="tour-idx">01 / 12</span>
+    <span class="tour-cap" data-zh="中轴导览" data-en="The Central Axis">中轴导览</span>
+  </div>
+  <h3 id="tour-title"></h3>
+  <p id="tour-text"></p>
+  <div class="tour-track"><i id="tour-progress"></i></div>
+  <div class="tour-ctrl">
+    <button id="tour-prev" data-zh="上一站" data-en="Prev">上一站</button>
+    <button id="tour-play" data-zh="暂停" data-en="Pause">暂停</button>
+    <button id="tour-next" data-zh="下一站" data-en="Next">下一站</button>
+    <button id="tour-exit" data-zh="退出" data-en="Exit">退出</button>
+  </div>
+</section>
+
+<section id="info" role="region" aria-live="polite" aria-labelledby="info-name">
+  <button id="info-close" aria-label="关闭">×</button>
   <span id="info-cat"></span>
   <h2 id="info-name"></h2>
   <div id="info-en"></div>
@@ -63,17 +89,19 @@
   <dl id="info-meta" class="info-meta" hidden></dl>
   <p id="info-desc"></p>
   <details id="info-note" class="info-note" hidden>
-    <summary>史料与考据</summary>
+    <summary data-zh="史料与考据" data-en="Notes & Sources">史料与考据</summary>
     <p id="info-note-text"></p>
   </details>
   <div class="info-actions">
-    <button id="info-focus">聚 焦</button>
+    <button id="info-focus" data-zh="聚 焦" data-en="Focus">聚 焦</button>
     <div class="info-nav">
-      <button id="info-prev" title="上一座">‹</button>
-      <button id="info-next" title="下一座">›</button>
+      <button id="info-prev" title="上一座" aria-label="上一座" data-title-zh="上一座" data-title-en="Previous">‹</button>
+      <button id="info-next" title="下一座" aria-label="下一座" data-title-zh="下一座" data-title-en="Next">›</button>
     </div>
   </div>
 </section>
+
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- 加载顺序有约束：后面的模块依赖前面挂在 window.GG 上的对象。
      three → 渲染基础设施 → 内容构件 → 主程序 -->
@@ -85,10 +113,12 @@
 <script src="js/labels.js"></script>
 <script src="js/picking.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/tour.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/geo.js"></script>
 <script src="js/buildings.js"></script>
 <script src="js/data/info.js"></script>
+<script src="js/data/tour.js"></script>
 <script src="js/palace.js"></script>
 <script src="js/app.js"></script>
 </body>

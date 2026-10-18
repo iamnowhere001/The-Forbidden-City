@@ -13,10 +13,13 @@
     this.onPick = opts.onPick || function () {};
     this.items = [];                   // 与侧栏顺序一致的建筑组
     this.byName = new Map();
+    this.registry = [];
+    this.current = null;
   }
 
   /** 按类别分组生成侧栏，并把每个条目映射回场景里的建筑组 */
   UI.prototype.build = function (registry) {
+    this.registry = registry;
     const groups = {};
     for (const g of registry) {
       const info = g.userData.info;
@@ -28,12 +31,12 @@
     let html = '';
     for (const c of ORDER) {
       if (!groups[c]) continue;
-      html += `<div class="li-group">${c}</div>`;
+      html += `<div class="li-group">${GG.i18n.cat(c)}</div>`;
       const seen = new Set();
       for (const info of groups[c]) {
         if (seen.has(info.name)) continue;
         seen.add(info.name);
-        html += `<div class="li" data-name="${info.name}"><span class="dot"></span>${info.name}</div>`;
+        html += `<div class="li" data-name="${info.name}" role="button" tabindex="0" aria-label="${info.name}"><span class="dot"></span>${info.name}</div>`;
       }
     }
     this.listEl.innerHTML = html;
@@ -48,11 +51,26 @@
       .filter(Boolean);
 
     this.listEl.querySelectorAll('.li').forEach((li) => {
-      li.addEventListener('click', () => {
+      const pick = () => {
         const g = this.byName.get(li.dataset.name);
         if (g) this.onPick(g);
+      };
+      li.addEventListener('click', pick);
+      li.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          pick();
+        }
       });
     });
+  };
+
+  /** 语言切换后重建侧栏，并保持信息卡内容 */
+  UI.prototype.refresh = function () {
+    if (!this.registry.length) return;
+    const cur = this.current;
+    this.build(this.registry);
+    if (cur) this.show(cur);
   };
 
   function esc(s) {
@@ -62,9 +80,11 @@
   }
 
   UI.prototype.show = function (info) {
-    this.els.name.textContent = info.name || '';
-    this.els.en.textContent = info.en || '';
-    this.els.cat.textContent = info.cat || '';
+    this.current = info;
+    const en = GG.i18n.lang === 'en';
+    this.els.name.textContent = en ? (info.en || info.name || '') : (info.name || '');
+    this.els.en.textContent = en ? (info.name || '') : (info.en || '');
+    this.els.cat.textContent = GG.i18n.cat(info.cat || '');
     this.els.year.textContent = info.year || '';
     this.els.desc.textContent = info.desc || '';
 
@@ -75,7 +95,7 @@
       ['现状', info.status]
     ].filter(([, v]) => v);
     this.els.meta.innerHTML = rows
-      .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`)
+      .map(([k, v]) => `<dt>${GG.i18n.meta(k)}</dt><dd>${esc(v)}</dd>`)
       .join('');
     this.els.meta.hidden = rows.length === 0;
 
@@ -93,6 +113,7 @@
   };
 
   UI.prototype.hide = function () {
+    this.current = null;
     this.els.info.classList.remove('open');
     this.setActive(null);
   };

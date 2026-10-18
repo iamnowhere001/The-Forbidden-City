@@ -20,12 +20,25 @@
     for (const v of list) {
       const b = document.createElement('button');
       b.dataset.view = v.id;
-      b.textContent = v.label;
-      b.title = v.name || v.label;
+      b.textContent = GG.i18n.t(v.label, v.labelEn);
+      b.title = GG.i18n.lang === 'en' ? v.labelEn : v.name;
+      b.setAttribute('aria-label', b.title);
       b.addEventListener('click', () => this.set(v.id));
       this.root.appendChild(b);
     }
     if (list.length) this._mark(list[0].id);
+  };
+
+  /** 语言切换后更新按钮文案，不重建节点，避免焦点丢失 */
+  Views.prototype.refresh = function () {
+    const list = GG.CONFIG.views.filter((v) => !v.hidden);
+    [...this.root.querySelectorAll('button')].forEach((b, i) => {
+      const v = list[i];
+      if (!v) return;
+      b.textContent = GG.i18n.t(v.label, v.labelEn);
+      b.title = GG.i18n.lang === 'en' ? v.labelEn : v.name;
+      b.setAttribute('aria-label', b.title);
+    });
   };
 
   Views.prototype._mark = function (id) {
@@ -42,18 +55,49 @@
   Views.prototype.applyInstant = function (key) {
     const v = this.get(key);
     if (!v) return;
-    this.camera.position.set(v.p[0], v.p[1], v.p[2]);
-    this.orbit.target.set(v.t[0], v.t[1], v.t[2]);
+    this.jumpTo(v.p, v.t);
+    this._mark(key);
+  };
+
+  /** 无动画落位 */
+  Views.prototype.jumpTo = function (pos, target) {
+    this.camera.position.set(pos[0], pos[1], pos[2]);
+    this.orbit.target.set(target[0], target[1], target[2]);
     this.camera.lookAt(this.orbit.target);
     this.orbit.syncFromCamera();
-    this._mark(key);
+  };
+
+  /**
+   * 取景到某座建筑：机位与 focusBuilding 共用同一套算法，
+   * 导览与“聚焦”按钮因此不会出现两种构图。
+   */
+  Views.prototype.spotFor = function (entry) {
+    const v = new THREE.Vector3();
+    entry.getWorldPosition(v);
+    const r = entry.userData.pickRadius || 30;
+    const lblY = entry.userData.labelY || 20;
+    const dist = Math.max(52, r * 3.2);
+    return {
+      p: [v.x + dist * 0.30, lblY * 0.86 + 16, v.z + dist * 0.86],
+      t: [v.x, lblY * 0.32, v.z]
+    };
+  };
+
+  /** 尊重系统“减少动效”设置：直接落位，不做镜头飞行 */
+  Views.prototype.moveTo = function (pos, target, dur) {
+    if (Views.reducedMotion()) this.jumpTo(pos, target);
+    else this.flyTo(pos, target, dur);
+  };
+
+  Views.reducedMotion = function () {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   };
 
   /** 带弧线飞行切换机位 */
   Views.prototype.set = function (key) {
     const v = this.get(key);
     if (!v) return;
-    this.flyTo(v.p, v.t, 1.6);
+    this.moveTo(v.p, v.t, 1.6);
     this._mark(key);
   };
 

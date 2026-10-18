@@ -96,6 +96,17 @@
 
 规范、术语表与 36 块匾额的校核清单见 [docs/content-guide.md](docs/content-guide.md)。
 
+### 8. 导览、分享与导出
+
+- **中轴导览**：12 站，从午门沿中轴走到神武门，最后回望角楼。镜头、字幕与停留时间由 `js/data/tour.js` 驱动，机位复用「聚焦」的取景算法。
+- **导览控制**：上一站 / 暂停 / 下一站 / 退出；键盘 `←` `→` `Space` `Esc`。
+- **深链分享**：把当前相机位置、注视点、选中建筑与日照编码进 URL，一键复制。
+- **画面导出**：把 WebGL 画布合成到 2D Canvas，左下角加标题与日期水印，导出 PNG。
+- **中英界面**：`EN / 中` 切换，覆盖按钮、侧栏分类、机位名、信息卡字段与导览字幕；词条正文保留中文原文。
+- **无障碍**：建筑标签与侧栏可 Tab 聚焦、Enter 打开；`prefers-reduced-motion` 下取消镜头飞行。
+
+无障碍自查结论见 [docs/accessibility.md](docs/accessibility.md)。
+
 ---
 
 ## 三、技术栈
@@ -190,6 +201,7 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 │   │   └── three.min.js    # Three.js r149 本地副本（594 KB）
 │   ├── debug.js            # 错误浮层 + URL 参数 + 可复现随机种子
 │   ├── config.js           # 全局配置：颜色、光照、标签阈值、机位表
+│   ├── i18n.js             # 中英界面文案与切换
 │   ├── sky.js              # 天空穹顶着色器
 │   ├── orbit.js            # 轨道控制器
 │   ├── renderer.js         # 渲染舞台：渲染器、相机、光照、雾、日照插值
@@ -197,15 +209,18 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 │   ├── labels.js           # DOM 标签：投影、避让、过滤
 │   ├── picking.js          # 拾取、悬停高亮、地面光圈
 │   ├── ui.js               # 侧栏索引 + 信息卡
+│   ├── tour.js             # 导览播放器（路线 / 字幕 / 播放控制）
 │   ├── textures.js         # 程序化贴图工厂，Canvas → CanvasTexture
 │   ├── geo.js              # 参数化几何：屋顶、垂脊、台基、栏板、踏跺、柱列、斗拱
 │   ├── buildings.js        # 建筑装配：殿堂、城门楼、亭、连廊、墙、树、铜陈设
 │   ├── data/
-│   │   └── info.js         # 41 条建筑词条（纯数据，与布局解耦）
+│   │   ├── info.js         # 41 条建筑词条（纯数据，与布局解耦）
+│   │   └── tour.js         # 12 站导览路线与中英字幕
 │   ├── palace.js           # 总平面布置
 │   └── app.js              # 主编排：初始化、事件、URL 参数、主循环
 ├── docs/
-│   └── content-guide.md    # 词条规范、术语表、匾额校核清单
+│   ├── content-guide.md    # 词条规范、术语表、匾额校核清单
+│   └── accessibility.md    # 无障碍自查报告
 ├── tools/
 │   ├── shot.sh             # 九机位截图（无头 Chrome + 固定种子）
 │   └── diff.py             # 截图回归比对
@@ -219,23 +234,26 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 | --- | --- | --- |
 | `debug.js` | 尽早安装错误浮层；解析 URL 参数；`?seed=1` 固定随机数 | `GG.query`、`GG.debug` |
 | `config.js` | 所有可调参数的单一来源 | `GG.CONFIG` |
+| `i18n.js` | 中英界面文案、分类与字段名翻译 | `GG.i18n`（`t` / `toggle` / `applyStatic`） |
 | `sky.js` | 单 pass 天空材质与穹顶 | `GG.createSky(C, sunDir)` |
 | `orbit.js` | 球坐标轨道控制、阻尼、触控、平移 | `GG.Orbit`、`syncFromCamera()` |
 | `renderer.js` | 渲染器、相机、环境贴图、光照、雾、`setSun(t)` | `GG.Stage` |
 | `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
 | `labels.js` | 标签 DOM、投影、避让 | `GG.Labels`（`build` / `update` / `invalidate`） |
 | `picking.js` | Raycaster 拾取、高亮、光圈 | `GG.Picker`（`pickAt` / `setHover`） |
-| `ui.js` | 侧栏索引与信息卡 | `GG.UI`（`build` / `show` / `hide`） |
+| `ui.js` | 侧栏索引与信息卡 | `GG.UI`（`build` / `show` / `hide` / `refresh`） |
+| `tour.js` | 导览播放器：换站、暂停、字幕 | `GG.Tour`（`start` / `next` / `prev` / `stop`） |
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, lerp }` |
 | `buildings.js` | 把几何 + 材质组装成建筑组 | `GG.build.{ createHall, createGateTower, createPavilion, createCorridor, createWall, createBronzeSet, treeGeometries, buildMaterials, MAT }` |
 | `data/info.js` | 41 条建筑词条（纯数据） | `GG.INFO` |
+| `data/tour.js` | 12 站导览路线与中英字幕 | `GG.TOUR` |
 | `palace.js` | 决定"什么建筑放在哪" | `GG.layout(scene)`、`GG.REGISTRY` |
 | `app.js` | 编排初始化与主循环，自执行 | 无导出 |
 
 ### 三条硬约束
 
-1. **脚本顺序不可乱**：`debug → config → three → sky → orbit → renderer → views → labels → picking → ui → textures → geo → buildings → data/info → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
+1. **脚本顺序不可乱**：`debug → config → i18n → three → sky → orbit → renderer → views → labels → picking → ui → tour → textures → geo → buildings → data/info → data/tour → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
 2. **建筑组靠 `userData` 进入索引**：`isBuilding = true` 才会被 `GG.layout` 收进 `REGISTRY`；`info` 决定标签与信息卡；`labelY` 决定标签高度。三者缺一，建筑就是"模型"而不是"可交互对象"。
 3. **坐标系**：`X` 向东为正，`Z` 向南为正，`Y` 向上，单位米。中轴在 `x = 0`。
 
@@ -251,12 +269,18 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 | 缩放 | 滚轮 / 双指捏合 | — | — |
 | 平移 | 右键或 Shift + 拖拽 | — | — |
 | 切换机位 | — | `1`–`9` | 右侧按钮组 |
-| 查看建筑 | 点击建筑或标签 | — | 左侧索引项 |
+| 查看建筑 | 点击建筑或标签 | `Tab` 聚焦后 `Enter` | 左侧索引项 |
 | 复位 | — | `R` | 「复位」 |
 | 自动旋转 | — | `Space` | 「旋转」 |
 | 关闭信息卡 | — | `Esc` | 卡片右上角 × |
 | 显示全部标签 | — | — | 「标注」 |
 | 日照时刻 | — | — | 底部滑块 |
+| 开始 / 退出导览 | — | `T` | 「导览」 |
+| 导览翻站 | — | `←` / `→` | 「上一站 / 下一站」 |
+| 导览暂停 | — | `Space` | 「暂停」 |
+| 分享当前视角 | — | — | 「分享」 |
+| 保存画面 | — | — | 「存图」 |
+| 中英切换 | — | — | 「EN / 中」 |
 
 九组机位与键位对应：`1` 全景、`2` 中轴、`3` 广场、`4` 太和殿、`5` 后三宫、`6` 御花园、`7` 神武门、`8` 俯瞰、`9` 东南角。
 
@@ -267,10 +291,12 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
 | `view` | `overview` / `axis` / `taihe` / `close` / `detail` / `inner` / `garden` / `shenwu` / `top` / `corner` | 直达机位，跳过飞行动画（`detail` 无按钮，仅直链可用） |
-| `select` | 建筑中文名，如 `太和殿` | 到达后自动打开该建筑信息卡（需与 `view` 同用） |
+| `select` | 建筑中文名，如 `太和殿` | 到达后自动打开该建筑信息卡（可与 `view` 或 `pos` 组合） |
 | `time` | `dawn` / `noon` / `dusk` / `0`–`1` | 初始日照时刻 |
 | `pos` | `x,y,z` | 直接指定相机位置 |
 | `tgt` | `x,y,z` | 指定相机注视点（配合 `pos`） |
+| `tour` | `1` | 加载后自动开始导览 |
+| `lang` | `en` / `zh` | 界面语言，优先级高于本地记忆 |
 | `exposure` | 浮点数，如 `0.9` | 曝光倍率，覆盖默认值 |
 | `sunmul` | 浮点数，如 `1.2` | 太阳强度倍率 |
 | `seed` | `1` | 固定 `Math.random` 种子，截图回归用 |
@@ -281,6 +307,7 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 ```text
 http://localhost:8931/?view=close&select=太和殿&time=dusk
 http://localhost:8931/?pos=0,80,300&tgt=0,30,150&exposure=1.1
+http://localhost:8931/?tour=1&lang=en
 ```
 
 ### 3. 代码示例：加一座殿
@@ -401,6 +428,9 @@ git add . && git commit -m "chore: 初始化仓库，导入 v0.9 基线"
 | 无 LOD | 远景仍按全精度渲染 | 移动端帧率受限的主因之一 |
 | Three.js r149 | 较旧，`outputEncoding` 等 API 已在新版废弃 | 升级需整体回归 |
 | 词条尺度多为示意 | 六宫面阔标注“示意”，不能当测绘数据 | 已在 `note` 与规范中说明 |
+| 英文界面正文仍是中文 | 标题、字段名与按钮已翻译，词条正文未全量翻译 | 避免机器翻译替代史料表述，后续人工校译 |
+| 导览只覆盖中轴 12 站 | 东西六宫与两翼未纳入路线 | 可后续扩为“中轴 + 东西路”两条线 |
+| 画布无文本替代 | 屏幕阅读器只能读侧栏词条 | 见 `docs/accessibility.md` |
 
 ---
 

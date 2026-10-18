@@ -122,16 +122,16 @@
        键位说明：8/9 沿用 v0.9 的约定（东南角是后加的机位，键位排在俯瞰之后），
        与按钮显示顺序不一致，属有意保留。 */
     views: [
-      { id: 'overview', label: '全景', name: '全景', key: '1', p: [0, 520, 950], t: [0, 4, 10] },
-      { id: 'axis', label: '中轴', name: '中轴', key: '2', p: [0, 88, 596], t: [0, 44, 120] },
-      { id: 'taihe', label: '广场', name: '太和殿广场', key: '3', p: [0, 78, 452], t: [0, 18, 150] },
-      { id: 'close', label: '太和殿', name: '太和殿', key: '4', p: [0, 48, 254], t: [0, 30, 148] },
-      { id: 'detail', label: '细部', name: '细部', p: [26, 26, 214], t: [0, 22, 152], hidden: true },
-      { id: 'inner', label: '后三宫', name: '后三宫', key: '5', p: [0, 96, -78], t: [0, 14, -242] },
-      { id: 'garden', label: '御花园', name: '御花园', key: '6', p: [0, 62, -276], t: [0, 10, -414] },
-      { id: 'shenwu', label: '神武门', name: '神武门', key: '7', p: [150, 74, -252], t: [-6, 24, -452] },
-      { id: 'corner', label: '东南角', name: '东南角', key: '9', p: [556, 300, 622], t: [-30, 14, 116] },
-      { id: 'top', label: '俯瞰', name: '俯瞰', key: '8', p: [0, 980, 150], t: [0, 0, 16] }
+      { id: 'overview', label: '全景', labelEn: 'Overview', name: '全景', key: '1', p: [0, 520, 950], t: [0, 4, 10] },
+      { id: 'axis', label: '中轴', labelEn: 'Axis', name: '中轴', key: '2', p: [0, 88, 596], t: [0, 44, 120] },
+      { id: 'taihe', label: '广场', labelEn: 'Square', name: '太和殿广场', key: '3', p: [0, 78, 452], t: [0, 18, 150] },
+      { id: 'close', label: '太和殿', labelEn: 'Hall', name: '太和殿', key: '4', p: [0, 48, 254], t: [0, 30, 148] },
+      { id: 'detail', label: '细部', labelEn: 'Detail', name: '细部', p: [26, 26, 214], t: [0, 22, 152], hidden: true },
+      { id: 'inner', label: '后三宫', labelEn: 'Inner Court', name: '后三宫', key: '5', p: [0, 96, -78], t: [0, 14, -242] },
+      { id: 'garden', label: '御花园', labelEn: 'Garden', name: '御花园', key: '6', p: [0, 62, -276], t: [0, 10, -414] },
+      { id: 'shenwu', label: '神武门', labelEn: 'North Gate', name: '神武门', key: '7', p: [150, 74, -252], t: [-6, 24, -452] },
+      { id: 'corner', label: '东南角', labelEn: 'Corner', name: '东南角', key: '9', p: [556, 300, 622], t: [-30, 14, 116] },
+      { id: 'top', label: '俯瞰', labelEn: 'Top', name: '俯瞰', key: '8', p: [0, 980, 150], t: [0, 0, 16] }
     ]
   };
 })();

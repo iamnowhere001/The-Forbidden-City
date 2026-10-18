@@ -8,11 +8,12 @@
   /* ?still=1：冻结相机、云层与水面动画，供截图回归做确定性比对 */
   const STILL = GG.query.get('still') === '1';
 
-  let stage, orbit, views, labels, picker, ui;
+  let stage, orbit, views, labels, picker, ui, tour;
   let registry = [];
   let selected = null;
   let clock;
   let labelFrame = 0;
+  let toastTimer = null;
 
   const dom = {};
 
@@ -33,16 +34,8 @@
   }
 
   function focusBuilding(entry) {
-    const v = new THREE.Vector3();
-    entry.getWorldPosition(v);
-    const r = entry.userData.pickRadius || 30;
-    const lblY = entry.userData.labelY || 20;
-    const dist = Math.max(52, r * 3.2);
-    views.flyTo(
-      [v.x + dist * 0.30, lblY * 0.86 + 16, v.z + dist * 0.86],
-      [v.x, lblY * 0.32, v.z],
-      1.5
-    );
+    const spot = views.spotFor(entry);
+    views.moveTo(spot.p, spot.t, 1.5);
     selectBuilding(entry);
   }
 
@@ -73,6 +66,101 @@
     stage.setSun(t);
     const sl = document.getElementById('sun');
     if (sl) sl.value = String(Math.round(t * 100));
+  }
+
+  /* ============================================================
+     提示条 / 分享 / 存图
+     ============================================================ */
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  /** 把当前机位、注视点、选中建筑与日照编码进链接 */
+  function viewLink() {
+    const c = stage.camera.position;
+    const t = orbit.target;
+    const q = new URLSearchParams();
+    q.set('pos', [c.x, c.y, c.z].map((n) => n.toFixed(1)).join(','));
+    q.set('tgt', [t.x, t.y, t.z].map((n) => n.toFixed(1)).join(','));
+    if (selected && selected.userData.info) q.set('select', selected.userData.info.name);
+    const sl = document.getElementById('sun');
+    if (sl) q.set('time', (sl.value / 100).toFixed(2));
+    if (GG.i18n.lang === 'en') q.set('lang', 'en');
+    return location.href.split('?')[0] + '?' + q.toString();
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy') ? resolve() : reject(new Error('copy failed'));
+      } catch (e) {
+        reject(e);
+      } finally {
+        document.body.removeChild(ta);
+      }
+    });
+  }
+
+  function shareView() {
+    const url = viewLink();
+    copyText(url)
+      .then(() => toast(GG.i18n.t('链接已复制', 'Link copied')))
+      .catch(() => {
+        window.prompt(GG.i18n.t('复制下面的链接', 'Copy this link'), url);
+      });
+  }
+
+  /** 当前画面导出 PNG，左下角加水印 */
+  function saveShot() {
+    stage.render();
+    const src = stage.renderer.domElement;
+    const out = document.createElement('canvas');
+    out.width = src.width;
+    out.height = src.height;
+    const ctx = out.getContext('2d');
+    ctx.drawImage(src, 0, 0);
+
+    const pad = Math.round(out.width * 0.022);
+    const barH = Math.round(out.width * 0.062);
+    const grad = ctx.createLinearGradient(0, out.height - barH, 0, out.height);
+    grad.addColorStop(0, 'rgba(10,8,6,0)');
+    grad.addColorStop(1, 'rgba(10,8,6,0.72)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, out.height - barH, out.width, barH);
+
+    const titleSize = Math.round(out.width * 0.015);
+    const subSize = Math.round(out.width * 0.0095);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#d9b661';
+    ctx.font = `${titleSize}px "Songti SC", "STSong", serif`;
+    ctx.fillText('紫禁城', pad, out.height - pad * 0.9);
+
+    const name = selected && selected.userData.info ? selected.userData.info.name : '';
+    const date = new Date().toLocaleDateString('zh-CN');
+    const sub = [name, date].filter(Boolean).join(' · ');
+    ctx.fillStyle = 'rgba(242,234,217,0.72)';
+    ctx.font = `${subSize}px "PingFang SC", sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillText(sub, out.width - pad, out.height - pad * 0.9);
+
+    const a = document.createElement('a');
+    a.download = ['紫禁城', name || '全景', date.replace(/\//g, '-')].join('-') + '.png';
+    a.href = out.toDataURL('image/png');
+    a.click();
+    toast(GG.i18n.t('画面已保存', 'Image saved'));
   }
 
   /* ============================================================
@@ -141,10 +229,45 @@
 
     views = new GG.Views({ camera: stage.camera, orbit, root: dom.views });
 
+    tour = new GG.Tour({
+      views,
+      findEntry: (name) => registry.find(
+        (x) => x.userData.info && x.userData.info.name === name
+      ),
+      onStop: (entry) => {
+        closeInfo();
+        picker.setHover(entry);
+      },
+      onExit: () => picker.setHover(null),
+      onFinish: () => toast(GG.i18n.t('导览结束', 'Tour finished'))
+    });
+
+    GG.i18n.applyStatic();
+    syncLangButton();
+
     clock = new THREE.Clock();
     bindEvents(canvas);
     readQuery();
     animate();
+  }
+
+  /** 语言切换：静态文案、机位按钮、侧栏、标签、导览一起刷新 */
+  function applyLang() {
+    GG.i18n.applyStatic();
+    if (views) views.refresh();
+    if (ui) ui.refresh();
+    if (labels) labels.build(registry);
+    if (tour) tour.refresh();
+    syncLangButton();
+  }
+
+  function syncLangButton() {
+    const b = document.getElementById('btn-lang');
+    if (!b) return;
+    const en = GG.i18n.lang === 'en';
+    b.textContent = en ? '中' : 'EN';
+    b.title = en ? '切换到中文' : '切换到英文';
+    b.setAttribute('aria-label', b.title);
   }
 
   /* ============================================================
@@ -171,19 +294,38 @@
     const sunSlider = document.getElementById('sun');
     sunSlider.addEventListener('input', () => stage.setSun(sunSlider.value / 100));
 
-    document.getElementById('btn-rotate').addEventListener('click', (e) => {
+    const rotateBtn = document.getElementById('btn-rotate');
+    rotateBtn.setAttribute('aria-pressed', 'false');
+    rotateBtn.addEventListener('click', (e) => {
       orbit.autoRotate = !orbit.autoRotate;
       e.currentTarget.classList.toggle('active', orbit.autoRotate);
+      e.currentTarget.setAttribute('aria-pressed', String(orbit.autoRotate));
     });
-    document.getElementById('btn-labels').addEventListener('click', (e) => {
+
+    const labelsBtn = document.getElementById('btn-labels');
+    labelsBtn.setAttribute('aria-pressed', 'false');
+    labelsBtn.addEventListener('click', (e) => {
       dom.labels.classList.toggle('show-all');
       document.body.classList.toggle('hide-labels');
-      e.currentTarget.classList.toggle('active');
+      const on = e.currentTarget.classList.toggle('active');
+      e.currentTarget.setAttribute('aria-pressed', String(on));
     });
+
     document.getElementById('btn-reset').addEventListener('click', () => {
       closeInfo();
       views.set('overview');
     });
+    document.getElementById('btn-tour').addEventListener('click', () => {
+      if (tour.active) tour.stop();
+      else {
+        closeInfo();
+        tour.start();
+      }
+    });
+    document.getElementById('btn-share').addEventListener('click', shareView);
+    document.getElementById('btn-shot').addEventListener('click', saveShot);
+    document.getElementById('btn-lang').addEventListener('click', () => GG.i18n.toggle());
+    document.addEventListener('gg:lang', applyLang);
     document.getElementById('panel-toggle').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('collapsed');
     });
@@ -196,13 +338,29 @@
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const k = e.key;
+
+      /* 导览进行中，方向键与空格交给导览 */
+      if (tour.active) {
+        if (k === 'ArrowRight') { tour.next(); return; }
+        if (k === 'ArrowLeft') { tour.prev(); return; }
+        if (k === ' ') { e.preventDefault(); tour.toggle(); return; }
+        if (k === 'Escape') { tour.stop(); return; }
+      }
+
       if (keyMap[k]) { views.set(keyMap[k]); return; }
       if (k === 'r' || k === 'R') { closeInfo(); views.set('overview'); return; }
       if (k === 'Escape') { closeInfo(); return; }
+      if (k === 't' || k === 'T') {
+        if (tour.active) tour.stop();
+        else { closeInfo(); tour.start(); }
+        return;
+      }
       if (k === ' ') {
         e.preventDefault();
         orbit.autoRotate = !orbit.autoRotate;
-        document.getElementById('btn-rotate').classList.toggle('active', orbit.autoRotate);
+        const b = document.getElementById('btn-rotate');
+        b.classList.toggle('active', orbit.autoRotate);
+        b.setAttribute('aria-pressed', String(orbit.autoRotate));
       }
     });
 
@@ -237,18 +395,19 @@
     }
 
     const qv = q.get('view');
-    if (!qp && qv && views.get(qv)) {
-      views.applyInstant(qv);
-      const qs = q.get('select');
-      if (qs) {
-        const target = registry.find((x) => x.userData.info && x.userData.info.name === qs);
-        if (target) setTimeout(() => selectBuilding(target), 180);
-      }
+    if (!qp && qv && views.get(qv)) views.applyInstant(qv);
+
+    /* select 允许与 view 或 pos 组合：深链分享正是 pos + select */
+    const qs = q.get('select');
+    if (qs && (qv || qp)) {
+      const target = registry.find((x) => x.userData.info && x.userData.info.name === qs);
+      if (target) setTimeout(() => selectBuilding(target), qp ? 350 : 180);
     }
 
     setStep('成 金', 100);
     setTimeout(() => document.getElementById('loader').classList.add('done'), 260);
     if (!qv && !qp) setTimeout(() => views.set('overview'), 480);
+    if (q.get('tour') === '1') setTimeout(() => tour.start(), 800);
   }
 
   /* ============================================================
