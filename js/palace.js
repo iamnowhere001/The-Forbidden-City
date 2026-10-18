@@ -9,96 +9,7 @@
 
   const REG = [];
 
-  const INFO = {
-    wumen: {
-      name: '午门', en: 'Meridian Gate', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '紫禁城正门，因居子午线正位得名。城台上建五凤楼，平面呈凹字形，两翼各设阙亭。明清两代在此举行颁诏、献俘大典。民间所谓"推出午门斩首"实为误传——明代行刑多在柴市口。'
-    },
-    taihemen: {
-      name: '太和门', en: 'Gate of Supreme Harmony', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '前朝正门，初名奉天门。重檐歇山顶，面阔九间，是外朝三大殿院落的门户。明代皇帝常在此御门听政，故又称"御门"。'
-    },
-    taihedian: {
-      name: '太和殿', en: 'Hall of Supreme Harmony', cat: '前朝', year: '明永乐十八年（1420）／清康熙三十四年（1695）重建',
-      desc: '俗称金銮殿，中国现存规模最大的木结构殿宇。面阔十一间 63.96 米，进深五间 37.2 米，通高 35.05 米。重檐庑殿顶，檐角走兽十只，为全国孤例。明清两代登极、大婚、册立、朝贺等大典均在此举行。'
-    },
-    zhonghedian: {
-      name: '中和殿', en: 'Hall of Central Harmony', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '方形四角攒尖顶，取《礼记》"中也者，天下之大本也"之意。皇帝赴太和殿大典前在此小憩，接受执事官员跪拜。'
-    },
-    baohedian: {
-      name: '保和殿', en: 'Hall of Preserving Harmony', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '重檐歇山顶，面阔九间。明代册立皇后、皇太子在此更衣；清代殿试自乾隆朝起固定于此，为"天子门生"的诞生之地。'
-    },
-    qianqingmen: {
-      name: '乾清门', en: 'Gate of Heavenly Purity', cat: '后寝', year: '明永乐十八年（1420）',
-      desc: '内廷正门，单檐歇山式。门前列鎏金铜狮一对。清康熙朝起，御门听政移至此，成为实际的政治议事场所。'
-    },
-    qianqinggong: {
-      name: '乾清宫', en: 'Palace of Heavenly Purity', cat: '后寝', year: '明永乐十八年（1420）',
-      desc: '内廷后三宫之首，重檐庑殿顶，面阔九间。明清十六位皇帝在此居住并处理政务。殿内高悬"正大光明"匾，清代秘密立储的密旨即藏于匾后。'
-    },
-    jiaotaidian: {
-      name: '交泰殿', en: 'Hall of Union', cat: '后寝', year: '明嘉靖年间',
-      desc: '取《易经》"天地交泰"之义，方形攒尖顶。清代皇后在此接受朝贺，殿内珍藏二十五方皇帝御宝，是皇权法统的象征之所。'
-    },
-    kunninggong: {
-      name: '坤宁宫', en: 'Palace of Earthly Tranquility', cat: '后寝', year: '明永乐十八年（1420）',
-      desc: '明代皇后正宫。清代改建，东暖阁为皇帝大婚洞房，西侧设萨满祭祀神堂，保留了大量满族旧俗。'
-    },
-    kunningmen: {
-      name: '坤宁门', en: 'Gate of Earthly Tranquility', cat: '后寝', year: '明代',
-      desc: '后三宫北面的门户，穿此门即入御花园。'
-    },
-    shenwumen: {
-      name: '神武门', en: 'Gate of Divine Prowess', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '紫禁城北门，明代称玄武门，清康熙时避讳改称神武门。门楼重檐庑殿顶，现为故宫博物院主要参观出口。'
-    },
-    wenyuange: {
-      name: '文华殿', en: 'Hall of Literary Glory', cat: '东路', year: '明初／清康熙二十二年（1683）重建',
-      desc: '明代为太子讲学之所，清代经筵典礼在此举行。殿后文渊阁曾藏《四库全书》，是皇家藏书重地。'
-    },
-    wuyingdian: {
-      name: '武英殿', en: 'Hall of Martial Valor', cat: '西路', year: '明初',
-      desc: '清代设修书处于此，所刻"殿本"以纸墨精良、校勘严谨著称。《四库全书》开馆期间，大批典籍在此校订缮写。'
-    },
-    cininggong: {
-      name: '慈宁宫', en: 'Palace of Compassion and Tranquility', cat: '西路', year: '明嘉靖十五年（1536）',
-      desc: '明清两代皇太后的居所。清初孝庄文皇后曾长居于此，是紫禁城内地位最尊的后妃宫殿。'
-    },
-    shoukanggong: {
-      name: '寿康宫', en: 'Palace of Longevity and Health', cat: '西路', year: '清雍正十三年（1735）',
-      desc: '乾隆帝为其母崇庆皇太后所建，是清代太后颐养天年的典型院落。'
-    },
-    ningshougong: {
-      name: '皇极殿', en: 'Hall of Imperial Supremacy', cat: '东路', year: '清乾隆三十七年（1772）',
-      desc: '宁寿宫区正殿。乾隆帝为自己退位后的太上皇生活预建，嘉庆元年在此举行千叟宴。'
-    },
-    fengxiandian: {
-      name: '奉先殿', en: 'Hall of Ancestral Worship', cat: '东路', year: '明永乐十八年（1420）',
-      desc: '皇家祖庙，供奉明清两代帝后神位。殿内原设暖阁、宝床，四时致祭，是宫中最重要的祭祀场所之一。'
-    },
-    tirenge: {
-      name: '体仁阁', en: 'Pavilion of Embodying Benevolence', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '太和殿广场东侧的崇楼，重檐歇山顶。明代曾在此存放缎匹，清代为皇家库房。'
-    },
-    hongyige: {
-      name: '弘义阁', en: 'Pavilion of Spreading Righteousness', cat: '前朝', year: '明永乐十八年（1420）',
-      desc: '太和殿广场西侧的崇楼，与体仁阁东西对称，构成三大殿院落完整的仪礼空间。'
-    },
-    yuhuayuan: {
-      name: '御花园', en: 'Imperial Garden', cat: '后寝', year: '明永乐十八年（1420）',
-      desc: '明代称宫后苑，占地约 1.2 万平方米。钦安殿居中，万春亭、千秋亭东西对称，堆秀山上御景亭可俯瞰紫禁全城。'
-    },
-    qinandian: {
-      name: '钦安殿', en: 'Hall of Imperial Peace', cat: '后寝', year: '明代',
-      desc: '御花园正中，重檐盝顶，供奉玄天上帝，是紫禁城中轴线上唯一的道教建筑。'
-    },
-    wanchunting: { name: '万春亭', en: 'Pavilion of Ten Thousand Springs', cat: '后寝', year: '明嘉靖十五年（1536）', desc: '御花园东侧，上圆下方的重檐亭，取天圆地方之意。' },
-    qianqiuting: { name: '千秋亭', en: 'Pavilion of a Thousand Autumns', cat: '后寝', year: '明嘉靖十五年（1536）', desc: '御花园西侧，与万春亭形制相同、东西对称，共成"春秋永续"之象。' },
-    duixiushan: { name: '堆秀山', en: 'Hill of Accumulated Elegance', cat: '后寝', year: '明万历十一年（1583）', desc: '御花园东北隅的太湖石假山，上建御景亭，是紫禁城内重阳登高的去处。' },
-    jiaolou: { name: '角楼', en: 'Corner Tower', cat: '城防', year: '明永乐十八年（1420）', desc: '紫禁城四隅各一，三重檐十字歇山顶，九梁十八柱七十二条脊，是明清官式建筑中结构最精巧的类型之一。' }
-  };
+  const INFO = GG.INFO || {};
 
   function add(scene, g, cfg) {
     g.position.set(cfg.x || 0, cfg.y || 0, cfg.z || 0);
@@ -541,12 +452,12 @@
 
     // 协和门 / 熙和门
     HALL({
-      x: 104, z: 318, ry: Math.PI / 2, info: null,
+      x: 104, z: 318, ry: Math.PI / 2, info: INFO.xiehemen, plaque: '协和门',
       w: 22, d: 12, h: 8, roofH: 6.5, style: 'xieshan',
       tiers: 1, tierH: 1.4, eave: 1.8
     });
     HALL({
-      x: -104, z: 318, ry: Math.PI / 2, info: null,
+      x: -104, z: 318, ry: Math.PI / 2, info: INFO.xihemen, plaque: '熙和门',
       w: 22, d: 12, h: 8, roofH: 6.5, style: 'xieshan',
       tiers: 1, tierH: 1.4, eave: 1.8
     });
@@ -561,7 +472,7 @@
 
     // 文华殿
     HALL({
-      x: 186, z: 250, info: INFO.wenyuange, plaque: '文华殿',
+      x: 186, z: 250, info: INFO.wenhuadian, plaque: '文华殿',
       w: 34, d: 22, h: 10, roofH: 8, style: 'xieshan',
       tiers: 2, tierH: 1.6, eave: 2.4, green: false
     });
@@ -591,42 +502,36 @@
     });
     // 皇极殿（宁寿宫区）
     HALL({
-      x: 236, z: -330, info: INFO.ningshougong, plaque: '皇极殿',
+      x: 236, z: -330, info: INFO.huangjidian, plaque: '皇极殿',
       w: 38, d: 22, h: 11, roofH: 8.5, style: 'xieshan', double: true,
       tiers: 2, tierH: 1.8, eave: 2.6
     });
 
     /* ================= 东六宫 ================= */
     const eastSix = [
-      ['景仁宫', 150, -150], ['承乾宫', 150, -212], ['钟粹宫', 150, -274],
-      ['延禧宫', 224, -150], ['永和宫', 224, -212], ['景阳宫', 224, -274]
+      [INFO.jingrengong, 150, -150], [INFO.chengqiangong, 150, -212], [INFO.zhongcuigong, 150, -274],
+      [INFO.yanxigong, 224, -150], [INFO.yonghegong, 224, -212], [INFO.jingyanggong, 224, -274]
     ];
-    for (const [nm, x, z] of eastSix) {
-      courtyard(scene, {
-        x, z, w: 62, d: 66,
-        info: { name: nm, en: nm, cat: '东路', year: '明永乐十八年（1420）', desc: '东六宫之一，明清两代妃嫔居所。院落格局为典型的两进四合院，正殿黄琉璃瓦歇山顶，配殿对称分布于东西。' }
-      });
+    for (const [info, x, z] of eastSix) {
+      courtyard(scene, { x, z, w: 62, d: 66, info });
     }
 
     /* ================= 西六宫 ================= */
     const westSix = [
-      ['永寿宫', -150, -150], ['翊坤宫', -150, -212], ['储秀宫', -150, -274],
-      ['启祥宫', -224, -150], ['长春宫', -224, -212], ['咸福宫', -224, -274]
+      [INFO.yongshougong, -150, -150], [INFO.yikungong, -150, -212], [INFO.chuxiugong, -150, -274],
+      [INFO.qixianggong, -224, -150], [INFO.changchungong, -224, -212], [INFO.xianfugong, -224, -274]
     ];
-    for (const [nm, x, z] of westSix) {
-      courtyard(scene, {
-        x, z, w: 62, d: 66,
-        info: { name: nm, en: nm, cat: '西路', year: '明永乐十八年（1420）', desc: '西六宫之一，明清两代妃嫔居所。慈禧太后早年曾居储秀宫，后又在长春宫居住多年。' }
-      });
+    for (const [info, x, z] of westSix) {
+      courtyard(scene, { x, z, w: 62, d: 66, info });
     }
 
     /* ================= 东西华门 & 附属值房 ================= */
     for (const sx of [-1, 1]) {
       const g = GG.build.createHall({
         w: 22, d: 14, h: 8.5, roofH: 7, style: 'xieshan', double: true,
-        tiers: 2, tierH: 1.4, eave: 2.0, info: sx > 0
-          ? { name: '东华门', en: 'East Glorious Gate', cat: '城防', year: '明永乐十八年（1420）', desc: '紫禁城东门，门钉纵九横八，为宫门中的特例。清代帝后灵柩由此出宫，故俗称"鬼门"。' }
-          : { name: '西华门', en: 'West Glorious Gate', cat: '城防', year: '明永乐十八年（1420）', desc: '紫禁城西门，清代帝后赴西苑、圆明园多由此出入。' }
+        tiers: 2, tierH: 1.4, eave: 2.0,
+        info: sx > 0 ? INFO.donghuamen : INFO.xihuamen,
+        plaque: sx > 0 ? '东华门' : '西华门'
       });
       g.position.set(sx * 372, 0, 196);
       g.rotation.y = Math.PI / 2;

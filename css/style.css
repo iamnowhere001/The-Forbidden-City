@@ -352,6 +352,8 @@ canvas#scene {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 #info.open {
   transform: translate(0, -50%);
@@ -418,6 +420,51 @@ canvas#scene {
 #info-desc {
   padding-bottom: 4px;
 }
+
+/* 结构化字段：形制 / 尺度 / 现状 */
+.info-meta {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(217, 182, 97, 0.14);
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  gap: 7px 10px;
+  font-size: 11.5px;
+  line-height: 1.75;
+}
+.info-meta dt {
+  color: rgba(217, 182, 97, 0.85);
+  letter-spacing: 0.1em;
+}
+.info-meta dd {
+  margin: 0;
+  color: rgba(242, 234, 217, 0.6);
+}
+.info-meta[hidden] { display: none; }
+
+/* 史料与考据（可折叠） */
+.info-note {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(217, 182, 97, 0.14);
+  font-size: 11.5px;
+}
+.info-note summary {
+  color: rgba(217, 182, 97, 0.85);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+}
+.info-note summary::-webkit-details-marker { display: none; }
+.info-note summary::before { content: "＋ "; }
+.info-note[open] summary::before { content: "－ "; }
+.info-note p {
+  margin: 9px 0 0;
+  line-height: 1.9;
+  color: rgba(242, 234, 217, 0.6);
+}
+.info-note[hidden] { display: none; }
 .info-actions {
   display: flex;
   align-items: center;

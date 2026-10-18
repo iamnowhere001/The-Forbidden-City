@@ -95,7 +95,10 @@
         en: document.getElementById('info-en'),
         cat: document.getElementById('info-cat'),
         year: document.getElementById('info-year'),
-        desc: document.getElementById('info-desc')
+        desc: document.getElementById('info-desc'),
+        meta: document.getElementById('info-meta'),
+        note: document.getElementById('info-note'),
+        noteText: document.getElementById('info-note-text')
       },
       onPick: focusBuilding
     });

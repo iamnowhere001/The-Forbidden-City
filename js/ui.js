@@ -55,12 +55,39 @@
     });
   };
 
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+    ));
+  }
+
   UI.prototype.show = function (info) {
     this.els.name.textContent = info.name || '';
     this.els.en.textContent = info.en || '';
     this.els.cat.textContent = info.cat || '';
     this.els.year.textContent = info.year || '';
     this.els.desc.textContent = info.desc || '';
+
+    /* 结构化字段：有值才显示，避免空行 */
+    const rows = [
+      ['形制', info.form],
+      ['尺度', info.scale],
+      ['现状', info.status]
+    ].filter(([, v]) => v);
+    this.els.meta.innerHTML = rows
+      .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`)
+      .join('');
+    this.els.meta.hidden = rows.length === 0;
+
+    /* 史料卡：只有标注了 note 的词条才出现 */
+    if (info.note) {
+      this.els.noteText.textContent = info.note;
+      this.els.note.hidden = false;
+      this.els.note.open = false;
+    } else {
+      this.els.note.hidden = true;
+    }
+
     this.els.info.classList.add('open');
     this.setActive(info.name);
   };

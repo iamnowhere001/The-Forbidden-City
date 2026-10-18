@@ -34,7 +34,7 @@
 - **举折曲线 + 翼角起翘**：屋面按 `curv = 1.55` 生成凹曲剖面，四角按 `|u|^11` 抬升，檐口自然上扬。
 - **重檐结构**：`double: true` 时屋身分上下两段（0.6 / 0.4 高度），上层宽度收至 0.72，形成真实的重檐层次。
 - **完整构件链**：台基（可多层）、汉白玉栏板、踏跺、柱列、斗拱环、椽头、瓦垄、垂脊、走兽、匾额。
-- **殿额匾**：20 座主要殿宇显式挂匾，六宫 12 院正殿按词条名自动生成，合计 32 块，Canvas 绘制蓝底金字 + 回纹角。
+- **殿额匾**：24 座主要殿宇显式挂匾，六宫 12 院正殿按词条名自动生成，合计 36 块，Canvas 绘制蓝底金字 + 回纹角。
 - **陈设小品**：太平缸、铜鹤、日晷，太和殿广场的品级山 18 座与云龙御路石雕。
 
 ### 2. 程序化贴图（Canvas 2D 实时绘制）
@@ -54,7 +54,7 @@
 - 城墙、四座角楼、护城河、景山与 18 座远山。
 - 松柏用 `InstancedMesh` 散布并做色彩抖动。
 
-当前共 **25 条建筑词条**，24 处挂载到场景实体，点击或点标签即可打开信息卡。
+当前共 **41 条建筑词条**，40 处挂载到场景实体，点击或点标签即可打开信息卡。词条带结构化字段（形制 / 尺度 / 现状）与可折叠的「史料与考据」，写作规范见 [docs/content-guide.md](docs/content-guide.md)。
 
 ### 4. 渲染管线
 
@@ -86,6 +86,16 @@
 - URL 参数直链与调参（见「使用示例」）。
 - 页面顶部内置运行时错误浮层，异常信息不会被浏览器吞掉。
 
+### 7. 词条与考据
+
+- 41 条词条独立存放在 `js/data/info.js`，与布局代码解耦。
+- 信息卡展示**形制 / 尺度 / 现状**三个结构化字段，空值自动隐藏。
+- 带 `note` 的词条会出现可折叠的「史料与考据」，用于标注示意范围或争议点。
+- 写作原则：不确定的形制标“示意”，不虚构尺寸；场景是示意复原，不是测绘成果。
+- 六宫 12 院各有独立词条，不再共用模板文案；东华门、西华门、协和门、熙和门补齐词条与匾额。
+
+规范、术语表与 36 块匾额的校核清单见 [docs/content-guide.md](docs/content-guide.md)。
+
 ---
 
 ## 三、技术栈
@@ -94,7 +104,7 @@
 | --- | --- | --- |
 | 渲染引擎 | **Three.js r149**（本地副本，594 KB） | 2023 年版本；API 与 r150+ 有差异，升级需回归 |
 | 语言 | 原生 JavaScript（ES2017+），IIFE + `window.GG` 命名空间 | 无 TypeScript、无打包器 |
-| 着色器 | GLSL ES（天空 / 云） | 内联于 `app.js` 的 `ShaderMaterial` |
+| 着色器 | GLSL ES（天空 / 云） | 见 `js/sky.js` 的 `ShaderMaterial` |
 | 贴图 | Canvas 2D → `THREE.CanvasTexture` | 全部运行时生成 |
 | 样式 | 原生 CSS（自定义属性 + 媒体查询） | 无预处理器、无 UI 框架 |
 | 构建 | **无** | 没有 `package.json`、`npm install`、`vite` |
@@ -190,8 +200,12 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 │   ├── textures.js         # 程序化贴图工厂，Canvas → CanvasTexture
 │   ├── geo.js              # 参数化几何：屋顶、垂脊、台基、栏板、踏跺、柱列、斗拱
 │   ├── buildings.js        # 建筑装配：殿堂、城门楼、亭、连廊、墙、树、铜陈设
-│   ├── palace.js           # 总平面布置 + 建筑词条数据 INFO
+│   ├── data/
+│   │   └── info.js         # 41 条建筑词条（纯数据，与布局解耦）
+│   ├── palace.js           # 总平面布置
 │   └── app.js              # 主编排：初始化、事件、URL 参数、主循环
+├── docs/
+│   └── content-guide.md    # 词条规范、术语表、匾额校核清单
 ├── tools/
 │   ├── shot.sh             # 九机位截图（无头 Chrome + 固定种子）
 │   └── diff.py             # 截图回归比对
@@ -215,12 +229,13 @@ tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, lerp }` |
 | `buildings.js` | 把几何 + 材质组装成建筑组 | `GG.build.{ createHall, createGateTower, createPavilion, createCorridor, createWall, createBronzeSet, treeGeometries, buildMaterials, MAT }` |
-| `palace.js` | 决定"什么建筑放在哪" | `GG.layout(scene)`、`GG.INFO`、`GG.REGISTRY` |
+| `data/info.js` | 41 条建筑词条（纯数据） | `GG.INFO` |
+| `palace.js` | 决定"什么建筑放在哪" | `GG.layout(scene)`、`GG.REGISTRY` |
 | `app.js` | 编排初始化与主循环，自执行 | 无导出 |
 
 ### 三条硬约束
 
-1. **脚本顺序不可乱**：`debug → config → three → sky → orbit → renderer → views → labels → picking → ui → textures → geo → buildings → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
+1. **脚本顺序不可乱**：`debug → config → three → sky → orbit → renderer → views → labels → picking → ui → textures → geo → buildings → data/info → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
 2. **建筑组靠 `userData` 进入索引**：`isBuilding = true` 才会被 `GG.layout` 收进 `REGISTRY`；`info` 决定标签与信息卡；`labelY` 决定标签高度。三者缺一，建筑就是"模型"而不是"可交互对象"。
 3. **坐标系**：`X` 向东为正，`Z` 向南为正，`Y` 向上，单位米。中轴在 `x = 0`。
 
@@ -385,7 +400,7 @@ git add . && git commit -m "chore: 初始化仓库，导入 v0.9 基线"
 | 无单元测试 | 逻辑回归靠截图 | 渲染路径已覆盖，纯函数未覆盖 |
 | 无 LOD | 远景仍按全精度渲染 | 移动端帧率受限的主因之一 |
 | Three.js r149 | 较旧，`outputEncoding` 等 API 已在新版废弃 | 升级需整体回归 |
-| 词条文案部分共用模板 | 六宫 12 院描述雷同 | 阶段三逐座改写 |
+| 词条尺度多为示意 | 六宫面阔标注“示意”，不能当测绘数据 | 已在 `note` 与规范中说明 |
 
 ---
 
