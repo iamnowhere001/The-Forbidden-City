@@ -738,7 +738,7 @@
           for (let k = 0; k < 2; k++) {
             const rg = GG.geo.roofGeometry({
               hw: w / 2 + 2.2, hd: w / 2 + 2.2, topX: w / 2 + 2.2, topZ: 0,
-              h: 2.6 + (2 - i) * 1.4, curv: 1.55, lift: 0.75,
+              h: 2.6 + (2 - i) * 1.4, curv: GG.CONFIG.roof.curv, lift: 0.75,
               uSeg: 8, vSeg: 3, withSides: false, sideVMax: 0
             });
             const rm = new THREE.Mesh(rg, M.tile);

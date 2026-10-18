@@ -138,24 +138,31 @@ python3 -m http.server 8931
 npx serve . -l 8931
 ```
 
-### 方式三：无头截图验证（开发用）
+### 方式三：截图回归（开发用）
 
-改动渲染相关代码后，建议用无头 Chrome 出图对比：
+`tools/shot.sh` 会自己起服务器、逐机位出图，默认带上 `?seed=1` 固定随机数：
 
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
-  --headless=new \
-  --use-angle=swiftshader --enable-unsafe-swiftshader \
-  --window-size=1600,1000 \
-  --virtual-time-budget=20000 \
-  --screenshot=/tmp/palace.png \
-  "http://localhost:8931/?view=overview"
+tools/shot.sh tools/after/v1.0          # 输出到指定目录
+tools/diff.py tools/baseline/v0.9 tools/after/v1.0
 ```
 
-两个必须注意的点：
+`shot.sh` 自动探测 Chrome 路径（本机可能装在 `/Applications/Chrome.app`）。手动跑单张时注意：
 
 1. **不能加 `--disable-gpu`**，否则 WebGL 上下文创建失败，页面只会停在"起 基"。
-2. 软件渲染下出图较慢，用 `--virtual-time-budget` 给足时间；必要时外层加超时看门狗。
+2. 必须带 `--use-angle=swiftshader --enable-unsafe-swiftshader`。
+3. 软件渲染下出图较慢，用 `--virtual-time-budget` 给足时间；脚本里已有看门狗。
+
+**为什么必须固定种子**：贴图和树木散布都用 `Math.random()`，同一版本连拍两次，全分辨率 RMSE 也有 3%~4%。加 `?seed=1` 后降到 0.01%，才看得出真实回归。
+
+```bash
+"/Applications/Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless=new \
+  --use-angle=swiftshader --enable-unsafe-swiftshader \
+  --window-size=1600,1000 --virtual-time-budget=20000 \
+  --screenshot=/tmp/palace.png \
+  "http://127.0.0.1:8931/?view=overview&seed=1"
+```
 
 ---
 
@@ -171,11 +178,23 @@ npx serve . -l 8931
 ├── js/
 │   ├── vendor/
 │   │   └── three.min.js    # Three.js r149 本地副本（594 KB）
+│   ├── debug.js            # 错误浮层 + URL 参数 + 可复现随机种子
+│   ├── config.js           # 全局配置：颜色、光照、标签阈值、机位表
+│   ├── sky.js              # 天空穹顶着色器
+│   ├── orbit.js            # 轨道控制器
+│   ├── renderer.js         # 渲染舞台：渲染器、相机、光照、雾、日照插值
+│   ├── views.js            # 机位表 → 按钮 / 飞行 / 直链落位
+│   ├── labels.js           # DOM 标签：投影、避让、过滤
+│   ├── picking.js          # 拾取、悬停高亮、地面光圈
+│   ├── ui.js               # 侧栏索引 + 信息卡
 │   ├── textures.js         # 程序化贴图工厂，Canvas → CanvasTexture
 │   ├── geo.js              # 参数化几何：屋顶、垂脊、台基、栏板、踏跺、柱列、斗拱
 │   ├── buildings.js        # 建筑装配：殿堂、城门楼、亭、连廊、墙、树、铜陈设
 │   ├── palace.js           # 总平面布置 + 建筑词条数据 INFO
-│   └── app.js              # 主程序：渲染管线、控制器、标签、拾取、视角、主循环
+│   └── app.js              # 主编排：初始化、事件、URL 参数、主循环
+├── tools/
+│   ├── shot.sh             # 九机位截图（无头 Chrome + 固定种子）
+│   └── diff.py             # 截图回归比对
 └── .workbuddy/
     └── memory/             # 开发日志（参数、踩过的坑、验证方法）
 ```
@@ -184,15 +203,24 @@ npx serve . -l 8931
 
 | 文件 | 职责 | 对外暴露 |
 | --- | --- | --- |
+| `debug.js` | 尽早安装错误浮层；解析 URL 参数；`?seed=1` 固定随机数 | `GG.query`、`GG.debug` |
+| `config.js` | 所有可调参数的单一来源 | `GG.CONFIG` |
+| `sky.js` | 单 pass 天空材质与穹顶 | `GG.createSky(C, sunDir)` |
+| `orbit.js` | 球坐标轨道控制、阻尼、触控、平移 | `GG.Orbit`、`syncFromCamera()` |
+| `renderer.js` | 渲染器、相机、环境贴图、光照、雾、`setSun(t)` | `GG.Stage` |
+| `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
+| `labels.js` | 标签 DOM、投影、避让 | `GG.Labels`（`build` / `update` / `invalidate`） |
+| `picking.js` | Raycaster 拾取、高亮、光圈 | `GG.Picker`（`pickAt` / `setHover`） |
+| `ui.js` | 侧栏索引与信息卡 | `GG.UI`（`build` / `show` / `hide`） |
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, lerp }` |
 | `buildings.js` | 把几何 + 材质组装成建筑组 | `GG.build.{ createHall, createGateTower, createPavilion, createCorridor, createWall, createBronzeSet, treeGeometries, buildMaterials, MAT }` |
 | `palace.js` | 决定"什么建筑放在哪" | `GG.layout(scene)`、`GG.INFO`、`GG.REGISTRY` |
-| `app.js` | 渲染与交互，自执行 | 无导出；调试参数写入 `GG.debug` |
+| `app.js` | 编排初始化与主循环，自执行 | 无导出 |
 
 ### 三条硬约束
 
-1. **脚本顺序不可乱**：`three → textures → geo → buildings → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
+1. **脚本顺序不可乱**：`debug → config → three → sky → orbit → renderer → views → labels → picking → ui → textures → geo → buildings → palace → app`。后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。
 2. **建筑组靠 `userData` 进入索引**：`isBuilding = true` 才会被 `GG.layout` 收进 `REGISTRY`；`info` 决定标签与信息卡；`labelY` 决定标签高度。三者缺一，建筑就是"模型"而不是"可交互对象"。
 3. **坐标系**：`X` 向东为正，`Z` 向南为正，`Y` 向上，单位米。中轴在 `x = 0`。
 
@@ -223,13 +251,15 @@ npx serve . -l 8931
 
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
-| `view` | `overview` / `axis` / `taihe` / `close` / `inner` / `garden` / `shenwu` / `top` / `corner` | 直达机位，跳过飞行动画 |
+| `view` | `overview` / `axis` / `taihe` / `close` / `detail` / `inner` / `garden` / `shenwu` / `top` / `corner` | 直达机位，跳过飞行动画（`detail` 无按钮，仅直链可用） |
 | `select` | 建筑中文名，如 `太和殿` | 到达后自动打开该建筑信息卡（需与 `view` 同用） |
 | `time` | `dawn` / `noon` / `dusk` / `0`–`1` | 初始日照时刻 |
 | `pos` | `x,y,z` | 直接指定相机位置 |
 | `tgt` | `x,y,z` | 指定相机注视点（配合 `pos`） |
 | `exposure` | 浮点数，如 `0.9` | 曝光倍率，覆盖默认值 |
 | `sunmul` | 浮点数，如 `1.2` | 太阳强度倍率 |
+| `seed` | `1` | 固定 `Math.random` 种子，截图回归用 |
+| `still` | `1` | 冻结相机、云层与水面动画，单版本自查用 |
 
 示例：
 
@@ -329,7 +359,9 @@ git add . && git commit -m "chore: 初始化仓库，导入 v0.9 基线"
 - **不新增外部运行时依赖**。确有必要时，先在 issue 里说明体积与离线影响。
 - **材质走单例**：新材质挂到 `buildMaterials()` 的 `MAT` 里复用，不要在每个建筑里 `new MeshStandardMaterial`。
 - **几何用完即弃但要合并**：同类小构件优先 `GG.geo.merge()` 或 `InstancedMesh`，控制 draw call。
-- **屋顶参数慎改**：`curv 1.55`、翼角 `lift = min(hw,hd) × 0.032`、`corner(u) = |u|^11` 是长期调出来的结果。改动必须附前后截图对比。
+- **屋顶参数慎改**：`GG.CONFIG.roof` 里的 `curv 1.55`、翼角 `lift = min(hw,hd) × 0.024`、庑殿推山系数 `0.76` 是长期调出来的结果。改动必须附前后截图对比。
+- **可调参数进配置**：颜色、曝光、光照强度、标签阈值、机位都放 `GG.CONFIG`，不要在模块里硬编码。
+- **改了渲染相关代码就跑一遍回归**：`tools/shot.sh tools/after/xxx` + `tools/diff.py tools/baseline/v0.9 tools/after/xxx`。
 - **贴图不要加纵向渐变**：沿坡面会重复成条带。瓦面质感优先用 bumpMap 与顶点色 AO 表达。
 
 ### 改动自查清单
@@ -348,12 +380,12 @@ git add . && git commit -m "chore: 初始化仓库，导入 v0.9 基线"
 
 | 限制 | 影响 | 备注 |
 | --- | --- | --- |
-| `app.js` 单文件 900 行 | 维护成本高 | 已在迭代计划第一阶段拆分 |
-| 建筑布局集中在一个 900 行函数 | 改一处要通读上下文 | 后续按区域拆函数 |
-| 无自动化测试 | 回归靠人眼 | 计划补截图比对脚本 |
+| 建筑布局集中在一个 925 行函数 | 改一处要通读上下文 | 计划按区域拆函数（阶段二） |
+| 截图回归依赖 SwiftShader | 与真机渲染有细微差异 | 只能验证"没变"，不能验证真机观感 |
+| 无单元测试 | 逻辑回归靠截图 | 渲染路径已覆盖，纯函数未覆盖 |
 | 无 LOD | 远景仍按全精度渲染 | 移动端帧率受限的主因之一 |
 | Three.js r149 | 较旧，`outputEncoding` 等 API 已在新版废弃 | 升级需整体回归 |
-| 词条文案部分共用模板 | 六宫 12 院描述雷同 | 计划逐座改写 |
+| 词条文案部分共用模板 | 六宫 12 院描述雷同 | 阶段三逐座改写 |
 
 ---
 

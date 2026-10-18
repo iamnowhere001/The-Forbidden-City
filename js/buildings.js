@@ -126,6 +126,7 @@
      核心：单座殿宇
      ============================================================ */
   function createHall(cfg) {
+    const RC = GG.CONFIG.roof;
     const M = buildMaterials();
     const group = new THREE.Group();
     const W = cfg.w, D = cfg.d, H = cfg.h;
@@ -299,7 +300,7 @@
     const hd = roofD / 2 + eaveR;
     let topX = 0, topZ = 0, sideVMax = 1, withSides = true;
     if (style === 'hip') {
-      topX = Math.max(hw * 0.05, hw - hd * 0.76);
+      topX = Math.max(hw * 0.05, hw - hd * RC.hipTopFactor);
       topZ = 0;
     } else if (style === 'xieshan') {
       topX = hw * 0.52;
@@ -313,10 +314,10 @@
       topX = 0;
       topZ = 0;
     }
-    const lift = Math.min(hw, hd) * 0.024;
+    const lift = Math.min(hw, hd) * RC.liftRatio;
     const rg = G.roofGeometry({
       hw: hw, hd: hd, topX: topX, topZ: topZ, h: roofH,
-      curv: 1.55, lift: lift,
+      curv: RC.curv, lift: lift,
       uSeg: Math.max(12, Math.round(hw * 0.6)),
       vSeg: 12, sideVMax: sideVMax, withSides: withSides
     });
@@ -328,7 +329,7 @@
 
     if (style === 'xieshan' || style === 'gable') {
       const gg = G.gableGeometry({
-        hw: hw, hd: hd, topX: topX, h: roofH, curv: 1.55,
+        hw: hw, hd: hd, topX: topX, h: roofH, curv: RC.curv,
         vCut: style === 'xieshan' ? 0.6 : 0
       });
       const gm = new THREE.Mesh(gg, M.wall);
@@ -338,7 +339,7 @@
     }
 
     const ridges = G.ridgeGeometry({
-      hw: hw, hd: hd, topX: topX, topZ: topZ, h: roofH, lift: lift, curv: 1.55
+      hw: hw, hd: hd, topX: topX, topZ: topZ, h: roofH, lift: lift, curv: RC.curv
     });
     const rm2 = new THREE.Mesh(ridges, M.ridge);
     rm2.position.y = roofBase;
@@ -498,6 +499,7 @@
      亭（御花园 / 角楼）
      ============================================================ */
   function createPavilion(cfg) {
+    const RC = GG.CONFIG.roof;
     const M = buildMaterials();
     const group = new THREE.Group();
     const W = cfg.w || 10, H = cfg.h || 5;
@@ -525,7 +527,7 @@
     for (let i = 0; i < layers; i++) {
       const rg = G.roofGeometry({
         hw: ww, hd: ww, topX: i === layers - 1 ? 0 : ww * 0.34, topZ: i === layers - 1 ? 0 : ww * 0.34,
-        h: hh, curv: 1.55, lift: ww * 0.06,
+        h: hh, curv: RC.curv, lift: ww * 0.06,
         uSeg: 12, vSeg: layers === 1 ? 8 : 4,
         withSides: true,
         sideVMax: 1

@@ -5,20 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>紫禁城 · 故宫 3D 交互展示</title>
 <link rel="stylesheet" href="css/style.css">
-<script>
-window.__errs = [];
-window.addEventListener('error', function (e) {
-  window.__errs.push((e.message || '') + '  @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno);
-  var d = document.getElementById('__err');
-  if (!d) {
-    d = document.createElement('div');
-    d.id = '__err';
-    d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#8b1a10;color:#fff;font:12px/1.6 monospace;padding:10px;white-space:pre-wrap';
-    (document.body || document.documentElement).appendChild(d);
-  }
-  d.textContent = window.__errs.join('\n');
-}, true);
-</script>
+<!-- 尽早安装错误浮层，脚本加载阶段的异常也要抓到 -->
+<script src="js/debug.js"></script>
+<script src="js/config.js"></script>
 </head>
 <body>
 
@@ -43,15 +32,7 @@ window.addEventListener('error', function (e) {
 </aside>
 
 <nav id="views">
-  <button data-view="overview" class="active">全景</button>
-  <button data-view="axis">中轴</button>
-  <button data-view="taihe">广场</button>
-  <button data-view="close">太和殿</button>
-  <button data-view="inner">后三宫</button>
-  <button data-view="garden">御花园</button>
-  <button data-view="shenwu">神武门</button>
-  <button data-view="corner">东南角</button>
-  <button data-view="top">俯瞰</button>
+  <!-- 按钮由 js/views.js 从 GG.CONFIG.views 生成 -->
 </nav>
 
 <div id="tools">
@@ -89,7 +70,16 @@ window.addEventListener('error', function (e) {
   </div>
 </section>
 
+<!-- 加载顺序有约束：后面的模块依赖前面挂在 window.GG 上的对象。
+     three → 渲染基础设施 → 内容构件 → 主程序 -->
 <script src="js/vendor/three.min.js"></script>
+<script src="js/sky.js"></script>
+<script src="js/orbit.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/views.js"></script>
+<script src="js/labels.js"></script>
+<script src="js/picking.js"></script>
+<script src="js/ui.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/geo.js"></script>
 <script src="js/buildings.js"></script>
