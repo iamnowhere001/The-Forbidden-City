@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>紫禁城 · 故宫 3D 交互展示</title>
+<link rel="stylesheet" href="css/style.css">
+<script>
+window.__errs = [];
+window.addEventListener('error', function (e) {
+  window.__errs.push((e.message || '') + '  @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno);
+  var d = document.getElementById('__err');
+  if (!d) {
+    d = document.createElement('div');
+    d.id = '__err';
+    d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#8b1a10;color:#fff;font:12px/1.6 monospace;padding:10px;white-space:pre-wrap';
+    (document.body || document.documentElement).appendChild(d);
+  }
+  d.textContent = window.__errs.join('\n');
+}, true);
+</script>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+<div id="labels"></div>
+
+<div id="loader">
+  <div class="seal">紫禁</div>
+  <div class="load-track"><div class="load-bar" id="load-bar"></div></div>
+  <p id="load-text">相 地</p>
+</div>
+
+<header id="brand">
+  <h1>紫禁城</h1>
+  <div class="sub">The Forbidden City · 1420</div>
+  <div class="rule"></div>
+</header>
+
+<aside id="sidebar">
+  <div class="cap">宫殿索引</div>
+  <div id="list"></div>
+</aside>
+
+<nav id="views">
+  <button data-view="overview" class="active">全景</button>
+  <button data-view="axis">中轴</button>
+  <button data-view="taihe">广场</button>
+  <button data-view="close">太和殿</button>
+  <button data-view="inner">后三宫</button>
+  <button data-view="garden">御花园</button>
+  <button data-view="shenwu">神武门</button>
+  <button data-view="corner">东南角</button>
+  <button data-view="top">俯瞰</button>
+</nav>
+
+<div id="tools">
+  <button class="tool" id="panel-toggle" title="收起索引">☰</button>
+  <button class="tool" id="btn-labels" title="显示全部标注">标注</button>
+  <button class="tool" id="btn-rotate" title="自动旋转">旋转</button>
+  <div class="sep"></div>
+  <div id="time" title="拖动改变日照时刻">
+    <span class="tlabel">晨</span>
+    <input type="range" id="sun" min="0" max="100" value="50" step="1" aria-label="日照时刻">
+    <span class="tlabel">暮</span>
+  </div>
+  <div class="sep"></div>
+  <button class="tool" id="btn-reset" title="回到全景">复位</button>
+</div>
+
+<div id="hint">
+  <div><b>左键</b> 旋转 · <b>滚轮</b> 缩放 · <b>右键</b> 平移</div>
+  <div>点击建筑或标注查看详情</div>
+</div>
+
+<section id="info">
+  <button id="info-close">×</button>
+  <span id="info-cat"></span>
+  <h2 id="info-name"></h2>
+  <div id="info-en"></div>
+  <div id="info-year"></div>
+  <p id="info-desc"></p>
+  <div class="info-actions">
+    <button id="info-focus">聚 焦</button>
+    <div class="info-nav">
+      <button id="info-prev" title="上一座">‹</button>
+      <button id="info-next" title="下一座">›</button>
+    </div>
+  </div>
+</section>
+
+<script src="js/vendor/three.min.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/geo.js"></script>
+<script src="js/buildings.js"></script>
+<script src="js/palace.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
