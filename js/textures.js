@@ -613,26 +613,45 @@
     return c;
   }
 
-  /* ---------- 水面（暗青绿，靠环境贴图出反光） ---------- */
-  function waterCanvas() {
+  /* ---------- 宫苑草地（御花园 / 慈宁宫花园 / 乾隆花园） ---------- */
+  function grassCanvas() {
     const S = 256;
     const c = cv(S, S);
     const ctx = c.getContext('2d');
-    const g = ctx.createLinearGradient(0, 0, S, S);
-    g.addColorStop(0, '#24383e');
-    g.addColorStop(0.5, '#31505a');
-    g.addColorStop(1, '#1d2f36');
-    ctx.fillStyle = g;
+    ctx.fillStyle = '#4c6a37';
     ctx.fillRect(0, 0, S, S);
-    for (let i = 0; i < 260; i++) {
-      ctx.strokeStyle = `rgba(190,220,228,${0.02 + Math.random() * 0.06})`;
-      ctx.lineWidth = 1 + Math.random() * 2;
-      const y = Math.random() * S;
+    // 大块明暗：草坡的阴阳面与补播痕迹
+    const palette = ['#587a41', '#46622f', '#62864a', '#3d5a2b', '#6d8b51'];
+    for (let i = 0; i < 70; i++) {
+      const x = Math.random() * S, y = Math.random() * S, r = 12 + Math.random() * 50;
+      const col = palette[Math.floor(Math.random() * palette.length)];
+      const gg = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gg.addColorStop(0, col + 'cc');
+      gg.addColorStop(1, col + '00');
+      ctx.fillStyle = gg;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.bezierCurveTo(S * 0.3, y + 6, S * 0.6, y - 6, S, y + 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 草叶笔触：竖直短亮线
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 2200; i++) {
+      const x = Math.random() * S, y = Math.random() * S;
+      const l = 1.1 + Math.random() * 2.4;
+      const v = 0.65 + Math.random() * 0.7;
+      ctx.strokeStyle = `rgba(${Math.floor(150 * v)},${Math.floor(178 * v)},${Math.floor(96 * v)},0.5)`;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (Math.random() - 0.5) * 0.8, y - l);
       ctx.stroke();
     }
+    // 细颗粒
+    for (let i = 0; i < 1800; i++) {
+      const x = Math.random() * S, y = Math.random() * S;
+      ctx.fillStyle = `rgba(${60 + Math.floor(Math.random() * 40)},${86 + Math.floor(Math.random() * 40)},${42 + Math.floor(Math.random() * 30)},0.4)`;
+      ctx.fillRect(x, y, 2, 2);
+    }
+    grain(ctx, S, S, 16);
     return c;
   }
 
@@ -685,7 +704,7 @@
       dougong: tex(dougongCanvas(), 1, 1),
       rafter: tex(rafterCanvas(), 1, 1),
       ground: tex(groundCanvas(), 1, 1),
-      water: tex(waterCanvas(), 1, 1),
+      grass: tex(grassCanvas(), 1, 1),
       goldBrick: tex(goldBrickCanvas(), 1, 1),
       carvedStone: tex(carvedStoneCanvas(), 1, 1),
       shadowBlob: tex(shadowBlobCanvas(), 1, 1)

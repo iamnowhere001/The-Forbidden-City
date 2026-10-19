@@ -11,7 +11,8 @@
     '后寝': 'Inner Court',
     '东路': 'East Route',
     '西路': 'West Route',
-    '城防': 'Defense'
+    '城防': 'Defense',
+    '宫外': 'Environs'
   };
 
   const META = {

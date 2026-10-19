@@ -14,6 +14,12 @@
   let clock;
   let labelFrame = 0;
   let toastTimer = null;
+  let dayPlay = false;                 // 昼夜流转开关
+  let dayDir = 1;                      // 1 = 晨→暮，-1 = 暮→晨（往返）
+  let dayT = C.sun.defaultT;           // 当前时刻（与滑块同步）
+  let compassRose = null;              // 指北针罗盘（随视线旋转）
+  let lastRoseDeg = null;
+  const _v3 = new THREE.Vector3();
 
   const dom = {};
 
@@ -63,9 +69,49 @@
       const n = parseFloat(key);
       t = isNaN(n) ? C.sun.defaultT : n;
     }
-    stage.setSun(t);
+    dayT = Math.max(0, Math.min(1, t));
+    stage.setSun(dayT);
     const sl = document.getElementById('sun');
-    if (sl) sl.value = String(Math.round(t * 100));
+    if (sl) sl.value = String(Math.round(dayT * 100));
+  }
+
+  /* ---------- 昼夜流转：45 秒单程，往返约 90 秒一昼夜 ---------- */
+  function setDayPlay(on) {
+    if (STILL) return;                 // 冻结模式下不开动画
+    dayPlay = !!on;
+    const b = document.getElementById('btn-tplay');
+    if (b) {
+      b.textContent = dayPlay ? '⏸' : '▶';
+      b.classList.toggle('active', dayPlay);
+      b.setAttribute('aria-pressed', String(dayPlay));
+    }
+  }
+
+  function stepDay(dt) {
+    dayT += dayDir * dt / 45;
+    if (dayT >= 1) { dayT = 1; dayDir = -1; }
+    else if (dayT <= 0) { dayT = 0; dayDir = 1; }
+    stage.setSun(dayT);
+    const sl = document.getElementById('sun');
+    if (sl) sl.value = String(Math.round(dayT * 100));
+  }
+
+  /* ============================================================
+     指北针：罗盘随视线旋转，点击回正北
+     ============================================================ */
+  function updateCompass() {
+    if (!compassRose) return;
+    _v3.copy(orbit.target).sub(stage.camera.position);
+    // 量化到 0.1°：视线不动时不反复写 DOM
+    const deg = Math.round(-Math.atan2(_v3.x, -_v3.z) * 1800 / Math.PI) / 10;
+    if (lastRoseDeg === deg) return;
+    lastRoseDeg = deg;
+    compassRose.style.transform = 'rotate(' + deg.toFixed(1) + 'deg)';
+  }
+
+  function faceNorth() {
+    const twoPi = Math.PI * 2;
+    orbit.tTheta = Math.round(orbit.tTheta / twoPi) * twoPi;
   }
 
   /* ============================================================
@@ -292,7 +338,26 @@
     document.getElementById('info-next').addEventListener('click', () => navigate(1));
 
     const sunSlider = document.getElementById('sun');
-    sunSlider.addEventListener('input', () => stage.setSun(sunSlider.value / 100));
+    sunSlider.addEventListener('input', () => {
+      if (dayPlay) setDayPlay(false);  // 手动拖动即停住流转
+      dayT = sunSlider.value / 100;
+      stage.setSun(dayT);
+    });
+
+    const tplayBtn = document.getElementById('btn-tplay');
+    if (tplayBtn) tplayBtn.addEventListener('click', () => setDayPlay(!dayPlay));
+
+    compassRose = document.querySelector('#compass .rose');
+    const compassEl = document.getElementById('compass');
+    if (compassEl) {
+      compassEl.addEventListener('click', faceNorth);
+      compassEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          faceNorth();
+        }
+      });
+    }
 
     const rotateBtn = document.getElementById('btn-rotate');
     rotateBtn.setAttribute('aria-pressed', 'false');
@@ -349,6 +414,13 @@
 
       if (keyMap[k]) { views.set(keyMap[k]); return; }
       if (k === 'r' || k === 'R') { closeInfo(); views.set('overview'); return; }
+      if (k === 'h' || k === 'H') {
+        const on = document.body.classList.toggle('hide-ui');
+        toast(on
+          ? GG.i18n.t('界面已隐藏 · 按 H 恢复', 'UI hidden · press H to show')
+          : GG.i18n.t('界面已恢复', 'UI shown'));
+        return;
+      }
       if (k === 'Escape') { closeInfo(); return; }
       if (k === 't' || k === 'T') {
         if (tour.active) tour.stop();
@@ -408,6 +480,7 @@
     setTimeout(() => document.getElementById('loader').classList.add('done'), 260);
     if (!qv && !qp) setTimeout(() => views.set('overview'), 480);
     if (q.get('tour') === '1') setTimeout(() => tour.start(), 800);
+    if (q.get('play') === '1') setDayPlay(true);
   }
 
   /* ============================================================
@@ -420,6 +493,7 @@
     if (!STILL) {
       views.step();
       if (!views.isFlying()) orbit.update(dt);
+      if (dayPlay) stepDay(dt);
       stage.tick(dt);
     } else if (stage.skyDome) {
       // 冻结动画，但穹顶仍要跟随相机，否则地平线会偏
@@ -427,6 +501,7 @@
     }
 
     picker.update(dt);
+    updateCompass();
 
     labelFrame++;
     if (labelFrame % C.label.updateEvery === 0) labels.update();

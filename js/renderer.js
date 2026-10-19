@@ -139,22 +139,23 @@
         .lerp(cFogTint, col.fogTintAmount);
       u.haze.value.copy(scene.fog.color).lerp(cHazeWhite, col.hazeAmount);
 
+      /* 水面：太阳方向、日色、天空色与雾色随时刻联动 */
+      if (GG.water) {
+        GG.water.sync(sunDirV, sun.color, u.bottom.value, scene.fog.color, C.fog.density);
+      }
+
       renderer.toneMappingExposure =
         (C.exposure.base + k * C.exposure.sunGain) * (GG.debug.exposure || 1);
     };
   }
 
-  /** 每帧：云飘移、穹顶跟随相机、水面 UV 流动 */
+  /** 每帧：云飘移、穹顶跟随相机、水面波纹推进 */
   Stage.prototype.tick = function (dt) {
     if (this.skyMat) {
       this.skyMat.uniforms.uTime.value += dt;
       if (this.skyDome) this.skyDome.position.copy(this.camera.position);
     }
-    const wm = GG.build && GG.build.MAT && GG.build.MAT.water;
-    if (wm && wm.map) {
-      wm.map.offset.x += dt * 0.006;
-      wm.map.offset.y += dt * 0.002;
-    }
+    if (GG.water) GG.water.tick(dt);
   };
 
   /**

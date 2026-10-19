@@ -82,10 +82,7 @@
       leaf2: new THREE.MeshStandardMaterial({
         color: 0x35552b, roughness: 0.92
       }),
-      water: new THREE.MeshStandardMaterial({
-        map: t.water, color: 0xffffff, roughness: 0.34, metalness: 0.2,
-        transparent: true, opacity: 0.97
-      })
+      water: GG.water.create()
     };
     MAT.tile.flatShading = false;
     Object.keys(MAT).forEach((k) => {
@@ -93,11 +90,10 @@
         MAT[k].envMapIntensity = 0.24;
       }
     });
-    /* 琉璃釉面 / 水面 / 铜活：给一点环境反射，避免全哑光 */
+    /* 琉璃釉面 / 铜活：给一点环境反射，避免全哑光（水面是自定义着色器，不走此表） */
     MAT.tile.envMapIntensity = 0.5;
     MAT.tileGreen.envMapIntensity = 0.45;
     MAT.tileCap.envMapIntensity = 0.38;
-    MAT.water.envMapIntensity = 0.6;
     MAT.gold.envMapIntensity = 0.9;
     MAT.bronze.envMapIntensity = 0.8;
     MAT.ridge.envMapIntensity = 0.7;
@@ -459,7 +455,7 @@
     const hall = createHall({
       w: mainW, d: mainD, h: mainH,
       roofH: roofH,
-      style: 'hip',
+      style: cfg.style || 'hip',
       double: true,
       tiers: 0,
       stairs: false,
@@ -631,7 +627,7 @@
   }
 
   /* ============================================================
-     宫墙
+     宫墙（可带雉堞：城墙用垛口，院墙用瓦顶压顶）
      ============================================================ */
   function createWall(cfg) {
     const M = buildMaterials();
@@ -650,6 +646,51 @@
     const capTop = new THREE.Mesh(new THREE.BoxGeometry(L + 0.5, 0.35, T + 1.4), M.tileCap);
     capTop.position.y = H + 0.95;
     group.add(capTop);
+    /* 雉堞：沿墙顶等距立垛，齿部留射孔；垛口用同一材质合并成一次绘制 */
+    if (cfg.crenel) {
+      const pitch = cfg.pitch || 2.6, mw = cfg.merlon || 1.5, mh = 1.3;
+      const parts = [];
+      const n = Math.floor(L / pitch);
+      for (let i = 0; i < n; i++) {
+        const x = -L / 2 + pitch * (i + 0.5);
+        parts.push(G.box(mw, mh, T * 0.62, { x, y: H + 0.95 + mh / 2 }));
+      }
+      // 内侧女墙（低一档，与外侧垛口形成内外两道）
+      for (let i = 0; i < n; i++) {
+        const x = -L / 2 + pitch * (i + 0.5) + pitch * 0.5;
+        parts.push(G.box(mw * 0.7, 0.75, T * 0.5, { x: x - pitch * 0.5, y: H + 0.95 + 0.375 }));
+      }
+      const mm = new THREE.Mesh(G.merge(parts), M.wall);
+      mm.castShadow = true;
+      group.add(mm);
+    }
+    group.userData.isBuilding = false;
+    return group;
+  }
+
+  /* ============================================================
+     马道 —— 从城内地面登上城墙顶的斜坡
+     ============================================================ */
+  function createRamp(cfg) {
+    const M = buildMaterials();
+    const group = new THREE.Group();
+    const W = cfg.w || 6, L = cfg.len || 24, T = cfg.t || 0.9;
+    const rise = cfg.rise || 9.6;
+    const ang = Math.atan2(rise, L);
+    const m = new THREE.Mesh(G.fitUV(new THREE.BoxGeometry(W, T, L), 0.3, T), M.stone);
+    m.position.y = rise / 2 - T * 0.32;   // 高端（局部 -Z）抵住墙顶
+    m.rotation.x = ang;
+    m.castShadow = true;
+    m.receiveShadow = true;
+    group.add(m);
+    // 两侧牙石
+    for (const sx of [-1, 1]) {
+      const k = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, L), M.marble);
+      k.position.set(sx * (W / 2 + 0.25), rise / 2 - T * 0.32 + 0.35, 0);
+      k.rotation.x = ang;
+      k.castShadow = true;
+      group.add(k);
+    }
     group.userData.isBuilding = false;
     return group;
   }
@@ -681,7 +722,7 @@
 
   GG.build = {
     buildMaterials, createHall, createGateTower, createPavilion,
-    createCorridor, createWall, treeGeometries, createBronzeSet,
+    createCorridor, createWall, createRamp, treeGeometries, createBronzeSet,
     get MAT() { return MAT; }
   };
 })();

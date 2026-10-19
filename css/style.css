@@ -163,12 +163,59 @@ canvas#scene {
   pointer-events: none;
 }
 #sidebar .cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 10px;
   letter-spacing: 0.34em;
   color: var(--gold-dim);
   padding: 0 0 10px 2px;
   border-bottom: 1px solid var(--gold-line);
   margin-bottom: 10px;
+}
+#read-count {
+  letter-spacing: 0.08em;
+  font-size: 9.5px;
+  color: rgba(217, 182, 97, 0.55);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#search-wrap { padding: 0 0 9px; }
+#search {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--paper);
+  background: rgba(217, 182, 97, 0.06);
+  border: 1px solid rgba(217, 182, 97, 0.2);
+  border-radius: 2px;
+  padding: 7px 9px;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+#search::placeholder { color: rgba(242, 234, 217, 0.34); }
+#search:focus {
+  border-color: var(--gold-dim);
+  background: rgba(217, 182, 97, 0.1);
+}
+#search::-webkit-search-cancel-button { display: none; }
+#no-result {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  color: rgba(242, 234, 217, 0.42);
+  padding: 10px 4px;
+  line-height: 1.9;
+}
+#no-result[hidden] { display: none; }
+.li.hidden { display: none; }
+.li-group.hidden { display: none; }
+.li.visited::after {
+  content: '✓';
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(217, 182, 97, 0.5);
 }
 #list {
   flex: 1 1 auto;
@@ -318,6 +365,14 @@ canvas#scene {
 #time input[type="range"]:active::-webkit-slider-thumb {
   transform: scale(1.25);
 }
+#time .mini {
+  padding: 4px 6px;
+  min-width: 26px;
+  text-align: center;
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0;
+}
 
 #hint {
   position: fixed;
@@ -335,6 +390,84 @@ canvas#scene {
 #hint b {
   color: rgba(240, 208, 132, 0.95);
   font-weight: 400;
+}
+
+/* ---------------- 指北针 ---------------- */
+#compass {
+  position: fixed;
+  right: 34px;
+  bottom: 112px;
+  z-index: 40;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 182, 97, 0.28);
+  background: radial-gradient(circle at 50% 42%, rgba(20, 15, 10, 0.82), rgba(14, 11, 8, 0.6));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: border-color 0.2s, opacity 0.35s ease;
+}
+#compass:hover { border-color: var(--gold-dim); }
+#compass .rose {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+#compass .dir {
+  position: absolute;
+  font-size: 9px;
+  letter-spacing: 0;
+  color: rgba(242, 234, 217, 0.72);
+}
+#compass .dir.n { top: 6px; left: 50%; transform: translateX(-50%); color: var(--gold); }
+#compass .dir.s { bottom: 5px; left: 50%; transform: translateX(-50%); }
+#compass .dir.e { right: 6px; top: 50%; transform: translateY(-50%); }
+#compass .dir.w { left: 6px; top: 50%; transform: translateY(-50%); }
+#compass .needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 34px;
+  margin: -17px 0 0 -5px;
+}
+#compass .needle::before,
+#compass .needle::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+#compass .needle::before {
+  top: 0;
+  border-bottom: 17px solid var(--gold);
+}
+#compass .needle::after {
+  bottom: 0;
+  border-top: 17px solid rgba(165, 50, 31, 0.85);
+}
+
+/* ---------------- 沉浸模式（H 切换） ---------------- */
+#brand, #sidebar, #views, #tools, #hint, #compass, #labels {
+  transition: opacity 0.35s ease;
+}
+body.hide-ui #brand,
+body.hide-ui #sidebar,
+body.hide-ui #views,
+body.hide-ui #tools,
+body.hide-ui #hint,
+body.hide-ui #compass,
+body.hide-ui #labels,
+body.hide-ui #info {
+  opacity: 0 !important;
+  visibility: hidden;               /* 移出 Tab 焦点顺序，不只是看不见 */
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
 }
 
 /* ---------------- 信息卡 ---------------- */
@@ -730,6 +863,11 @@ body.hide-labels #labels { display: none; }
   }
   #time input[type="range"] { width: 78px; }
   #hint { display: none; }
+  #compass { bottom: 148px; right: 14px; width: 50px; height: 50px; }
+  #compass .dir { font-size: 8px; }
+  #compass .needle { height: 28px; margin-top: -14px; }
+  #compass .needle::before { border-bottom-width: 14px; border-left-width: 4px; border-right-width: 4px; }
+  #compass .needle::after { border-top-width: 14px; border-left-width: 4px; border-right-width: 4px; }
   #info {
     top: auto;
     bottom: 0;
