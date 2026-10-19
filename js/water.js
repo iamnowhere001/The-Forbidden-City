@@ -23,7 +23,10 @@
     uniform vec3 uDeepColor;
     uniform vec3 uFogColor;
     uniform float uFogDensity;
+    uniform float uRain;
     varying vec3 vWorld;
+
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 
     void main(){
       vec3 toCam = cameraPosition - vWorld;
@@ -40,6 +43,27 @@
       float dz = cos(q.y * 0.95 - t * 0.95) * 0.95 * 0.044
                + cos((q.x + q.y) * 0.42 + t * 0.70) * 0.42 * 0.060
                - cos((q.x - q.y) * 0.33 - t * 0.55) * 0.33 * 0.052;
+
+      /* 近景细纹：60 米内可见，远处迅速衰减；不做镜面 pass 的补偿 */
+      float nearFade = exp(-dist * 0.040);
+      dx += (cos(q.x * 7.3 + t * 3.1) * 0.0062 + cos(q.y * 9.1 - t * 2.4) * 0.0048) * nearFade;
+      dz += (cos(q.y * 8.7 - t * 2.9) * 0.0058 + cos(q.x * 10.3 + t * 3.4) * 0.0044) * nearFade;
+
+      /* 雨滴涟漪：格点随机相位，向外扩散的圆环 */
+      if (uRain > 0.01) {
+        vec2 rp = vWorld.xz * 0.42;
+        vec2 ip = floor(rp);
+        vec2 fp = fract(rp) - 0.5;
+        float h = hash(ip);
+        float phase = fract(uTime * 0.55 + h * 7.0);
+        float r = length(fp);
+        float ring = smoothstep(0.06, 0.0, abs(r - phase * 0.42));
+        float drop = ring * (1.0 - phase) * step(0.62, h) * uRain;
+        vec2 dir = normalize(fp + vec2(0.0001));
+        dx += dir.x * drop * 0.85;
+        dz += dir.y * drop * 0.85;
+      }
+
       vec3 N = normalize(vec3(-dx * damp * 6.0, 1.0, -dz * damp * 6.0));
 
       /* 菲涅耳：掠射角反射天空，正射角透出深水色 */
@@ -69,10 +93,12 @@
     uSkyColor: { value: new THREE.Color(0xc3cdd8) },
     uDeepColor: { value: new THREE.Color(0x223c46) },
     uFogColor: { value: new THREE.Color(0xc3cdd8) },
-    uFogDensity: { value: 0.00026 }
+    uFogDensity: { value: 0.00026 },
+    uRain: { value: 0 }
   };
 
   let material = null;
+  let rainAmt = 0;
 
   /** 单例：护城河与金水河共用，避免重复编译着色器 */
   GG.water = {
@@ -85,6 +111,7 @@
         fog: false,
         side: THREE.DoubleSide
       });
+      UNIFORMS.uRain.value = rainAmt;
       return material;
     },
 
@@ -97,6 +124,12 @@
       u.uSkyColor.value.copy(skyColor);
       u.uFogColor.value.copy(fogColor);
       u.uFogDensity.value = fogDensity;
+    },
+
+    /** 雨天打开涟漪；材质未创建时先记下，create 时补上 */
+    setRain(on) {
+      rainAmt = on ? 1 : 0;
+      if (material) material.uniforms.uRain.value = rainAmt;
     },
 
     /** 每帧推进波纹时间 */

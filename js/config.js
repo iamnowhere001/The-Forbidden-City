@@ -49,7 +49,30 @@
       defaultT: 0.5
     },
 
-    timePresets: { dawn: 0.14, noon: 0.5, dusk: 0.88 },
+    /* ---------- 昼夜：t = 0/1 深夜，0.25 日出，0.5 正午，0.75 日落 ---------- */
+    day: {
+      sunrise: 0.25,
+      sunset: 0.75,
+      nightFall: 0.16,          // 太阳高度系数 k 低于此值开始入夜
+      skyTop: 0x070c1a,
+      skyBottom: 0x121a2c,
+      haze: 0x0f141e,
+      ambient: 0x1b2436,
+      ambientI: 0.09,
+      hemiSky: 0x1b2740,
+      hemiGround: 0x0b0e13,
+      hemiI: 0.10,
+      moon: 0xd6e2ff,
+      moonI: 0.22,
+      exposure: 0.68,
+      /* 窗纸与宫灯：夜间自发光，白天归零 */
+      windowGlow: 0xffb35c,
+      windowEmissive: 0.85,
+      lanternGlow: 0xffa23c,
+      lanternEmissive: 1.0
+    },
+
+    timePresets: { dawn: 0.27, noon: 0.5, dusk: 0.73, night: 0.0 },
 
     /* ---------- 天空与雾的配色 ---------- */
     colors: {

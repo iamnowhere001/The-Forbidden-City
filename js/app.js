@@ -19,6 +19,9 @@
   let dayT = C.sun.defaultT;           // 当前时刻（与滑块同步）
   let compassRose = null;              // 指北针罗盘（随视线旋转）
   let lastRoseDeg = null;
+  let statsEl = null;                  // ?stats=1 性能面板
+  let statsAcc = 0;
+  let statsFrames = 0;
   const _v3 = new THREE.Vector3();
 
   const dom = {};
@@ -210,6 +213,36 @@
   }
 
   /* ============================================================
+     性能面板：?stats=1
+     每 0.5 秒汇总一次，避免每帧写 DOM 反过来影响测量。
+     draw call 与三角形数取 renderer.info，包含阴影 pass 之外的主 pass。
+     ============================================================ */
+  function initStats() {
+    if (GG.query.get('stats') !== '1') return;
+    statsEl = document.getElementById('stats');
+    if (statsEl) statsEl.hidden = false;
+  }
+
+  function updateStats(dt) {
+    if (!statsEl) return;
+    statsAcc += dt;
+    statsFrames++;
+    if (statsAcc < 0.5) return;
+    const info = stage.renderer.info;
+    const fps = statsFrames / statsAcc;
+    const ms = (statsAcc * 1000) / statsFrames;
+    const tri = info.render.triangles;
+    statsEl.textContent =
+      'fps  ' + fps.toFixed(0).padStart(3) + '   ' + ms.toFixed(1) + ' ms\n' +
+      'draw ' + String(info.render.calls).padStart(3) +
+      '   tri ' + (tri >= 1000 ? (tri / 1000).toFixed(0) + 'k' : String(tri)) + '\n' +
+      'geo  ' + String(info.memory.geometries).padStart(3) +
+      '   tex ' + info.memory.textures;
+    statsAcc = 0;
+    statsFrames = 0;
+  }
+
+  /* ============================================================
      初始化
      ============================================================ */
   function init() {
@@ -293,6 +326,7 @@
 
     clock = new THREE.Clock();
     bindEvents(canvas);
+    initStats();
     readQuery();
     animate();
   }
@@ -448,6 +482,10 @@
      ============================================================ */
   function readQuery() {
     const q = GG.query;
+
+    /* 天候先落地：它改材质颜色与 tint，setSun 会读这些值 */
+    if (GG.weather) GG.weather.apply(q.get('weather') || 'clear', stage);
+
     const qTime = q.get('time');
     setTime(qTime || 'noon');
 
@@ -502,11 +540,14 @@
 
     picker.update(dt);
     updateCompass();
+    /* 粒子的下落由 dt 驱动；STILL 时 dt 传 0，位置仍跟随相机 */
+    if (GG.weather) GG.weather.tick(STILL ? 0 : dt, stage.camera);
 
     labelFrame++;
     if (labelFrame % C.label.updateEvery === 0) labels.update();
 
     stage.render();
+    updateStats(dt);
   }
 
   if (document.readyState === 'loading') {

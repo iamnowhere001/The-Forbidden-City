@@ -636,6 +636,24 @@ body.hide-ui #info {
 }
 #tour-exit { margin-left: auto; }
 
+/* ---------------- 性能面板（?stats=1） ---------------- */
+#stats {
+  position: fixed;
+  top: 104px;
+  right: 30px;
+  z-index: 45;
+  padding: 7px 10px;
+  background: rgba(10, 8, 6, 0.76);
+  border: 1px solid var(--gold-line);
+  border-radius: 2px;
+  color: rgba(242, 234, 217, 0.86);
+  font: 10.5px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre;
+  pointer-events: none;
+  letter-spacing: 0.03em;
+}
+body.hide-ui #stats { display: none; }
+
 /* ---------------- 提示条 ---------------- */
 #toast {
   position: fixed;

@@ -44,7 +44,9 @@
         color: 0x5e221a, roughness: 0.78, metalness: 0.04
       }),
       lattice: new THREE.MeshStandardMaterial({
-        map: t.lattice, roughness: 0.75, metalness: 0.12
+        map: t.lattice, roughness: 0.75, metalness: 0.12,
+        /* 窗纸透光：白天 intensity 为 0，入夜后由 Stage.setSun 拉到 0.85 */
+        emissive: 0xffb35c, emissiveMap: t.lattice, emissiveIntensity: 0
       }),
       caihua: new THREE.MeshStandardMaterial({
         map: t.caihua, color: 0x9aa8ad, roughness: 0.78, metalness: 0.08

@@ -1275,17 +1275,17 @@
       const p = GG.build.createPavilion({ w: 8, h: 4.4, roofH: 5, tiers: 1, info: null });
       add(scene, p, { x: hp.x, y: hillY(hp.x, hp.z), z: hp.z });
     }
-    // 寿皇殿建筑群：景山东麓的独立院落
-    const SH = { x: 270, z: -900, w: 120, d: 110 };
+    // 寿皇殿建筑群：景山正北，与神武门—景山同处一条中轴
+    const SH = { x: 0, z: -1080, w: 120, d: 110 };
     yardPave(scene, SH.w - 8, SH.d - 8, SH.x, SH.z);
     wallBox(scene, SH.x, SH.z, SH.w, SH.d, 5.5, 22);
     HALL({
-      x: SH.x, z: -852, info: null, plaque: '寿皇门',
+      x: SH.x, z: SH.z + 48, info: null, plaque: '寿皇门',
       w: 22, d: 11, h: 8, roofH: 6, style: 'xieshan',
       tiers: 1, tierH: 1.4, eave: 1.8
     });
     HALL({
-      x: SH.x, z: -908, info: INFO.shouhuangdian, plaque: '寿皇殿',
+      x: SH.x, z: SH.z - 8, info: INFO.shouhuangdian, plaque: '寿皇殿',
       w: 34, d: 20, h: 10, roofH: 8, style: 'xieshan', double: true,
       tiers: 2, tierH: 1.6, eave: 2.4
     });
@@ -1294,7 +1294,7 @@
         w: 15, d: 19, h: 6.6, roofH: 4.8, style: 'gable',
         tiers: 1, tierH: 0.9, railing: false, stairs: false, eave: 1.3, info: null
       });
-      side.position.set(sx * 44, 0, -908);
+      side.position.set(sx * 44, 0, SH.z - 8);
       side.rotation.y = Math.PI / 2;
       scene.add(side);
       REG.push(side);
@@ -1574,6 +1574,39 @@
     const orn = new THREE.Mesh(GG.geo.merge(ornament), M.darkStone);
     orn.castShadow = true;
     scene.add(orn);
+
+    /* ================= 宫灯：夜间点亮的自发光灯笼 =================
+       灯体与灯杆各一个 InstancedMesh，16 座合计 2 个 draw call。
+       材质强度由 Stage.setSun 按夜晚系数调节，白天完全不发光。 */
+    const lanternSpots = [
+      [-78, 232], [78, 232], [-78, 300], [78, 300],
+      [-46, 356], [46, 356], [-58, -128], [58, -128],
+      [-58, -212], [58, -212], [-40, -322], [40, -322],
+      [-158, -140], [158, -140], [-196, 62], [196, 62]
+    ];
+    const lampGeo = new THREE.SphereGeometry(0.62, 8, 6);
+    lampGeo.scale(1, 1.3, 1);
+    const lampMat = new THREE.MeshStandardMaterial({
+      color: 0x6d2011, emissive: 0xff9a48, emissiveIntensity: 0, roughness: 0.82
+    });
+    const lampMesh = new THREE.InstancedMesh(lampGeo, lampMat, lanternSpots.length);
+    const poleGeo = new THREE.CylinderGeometry(0.07, 0.10, 3.1, 5);
+    const poleMesh = new THREE.InstancedMesh(poleGeo, M.wood, lanternSpots.length);
+    poleMesh.castShadow = true;
+    const _lampDummy = new THREE.Object3D();
+    lanternSpots.forEach(([x, z], i) => {
+      _lampDummy.position.set(x, 3.75, z);
+      _lampDummy.updateMatrix();
+      lampMesh.setMatrixAt(i, _lampDummy.matrix);
+      _lampDummy.position.set(x, 1.55, z);
+      _lampDummy.updateMatrix();
+      poleMesh.setMatrixAt(i, _lampDummy.matrix);
+    });
+    lampMesh.instanceMatrix.needsUpdate = true;
+    poleMesh.instanceMatrix.needsUpdate = true;
+    scene.add(poleMesh);
+    scene.add(lampMesh);
+    GG.build.MAT.lantern = lampMat;
 
     return REG;
   };
