@@ -49,14 +49,14 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 | `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
 | `labels.js` | 标签 DOM、投影、避让、优先级过滤 | `GG.Labels`（`build` / `update` / `invalidate`） |
 | `picking.js` | Raycaster 拾取、悬停高亮、地面光圈 | `GG.Picker`（`pickAt` / `setHover`） |
-| `ui.js` | 侧栏索引（搜索、已阅打卡）与信息卡 | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited`） |
-| `tour.js` | 导览播放器：换站、暂停、字幕 | `GG.Tour`（`start` / `next` / `prev` / `stop`） |
+| `ui.js` | 侧栏索引（搜索 / 分类 / 年代 / 已阅）、信息卡与互链 | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited`） |
+| `tour.js` | 导览播放器：多路线切换、换站、暂停、字幕 | `GG.Tour`（`start` / `setRoute` / `next` / `prev` / `stop`） |
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, lerp }` |
 | `buildings.js` | 几何 + 材质组装成建筑组 | `GG.build.{ createHall, createGateTower, createPavilion, createCorridor, createWall, createBronzeSet, treeGeometries, buildMaterials, MAT }` |
 | `data/info.js` | 建筑词条（纯数据） | `GG.INFO` |
 | `data/tour.js` | 12 站导览路线与中英字幕 | `GG.TOUR` |
-| `palace.js` | 决定“什么建筑放在哪” | `GG.layout(scene)`、`GG.REGISTRY` |
+| `palace.js` | 总平面布置，内部按区域拆成五段函数 | `GG.layout(scene)`、`GG.REGISTRY` |
 | `app.js` | 编排初始化与主循环，自执行 | 无导出 |
 
 ---
@@ -113,13 +113,15 @@ HALL({
   info: {
     name: '体元殿',
     en: 'Hall of Primordial Origin',
+    py: 'tiyuandian', pyi: 'tyd',  // 拼音全拼与首字母，搜索用
     cat: '西路',
     year: '清',
     form: '单檐歇山顶',
     scale: '面阔五间（示意）',
     status: '原状陈列',         // 可选
     desc: '……',
-    note: '……'                 // 可选，出现则信息卡多一层「史料与考据」
+    note: '……',                 // 可选，出现则信息卡多一层「史料与考据」
+    rel: ['shoukanggong']       // 可选，相关词条的 info key
   }
 });
 ```
@@ -170,7 +172,47 @@ cache = {
 
 ### 加一条导览线
 
-`js/data/tour.js` 是纯数据。每条路线由站点数组组成，机位复用 `Views.spotFor()` 的取景算法，不要另写一套坐标。多路线切换本身尚未实现，属于 v2.3 的 T6.1。
+`js/data/tour.js` 是纯数据，结构是 `GG.TOUR.routes[]`：
+
+```js
+{
+  id: 'inner',                                  // 唯一标识，也用于 tab 的 data-route
+  title: { zh: '六宫导览', en: 'The Six Palaces' },
+  short: { zh: '六宫', en: 'Palaces' },          // tab 上的短文案
+  stops: [{ target: '景仁宫', dwell: 9000, zh: '…', en: '…' }]
+}
+```
+
+- `target` 必须与 `info.name` 完全一致。**区域词条（如「御花园」）没有挂到场景实体，写进路线会被静默跳过**——用园内具体的亭子代替。
+- 机位复用 `Views.spotFor()` 的取景算法，不要另写坐标。
+- 新增路线后 `node tools/search-check.js` 会校验站点是否有对应词条、字幕是否齐全。
+- tab 按钮由 `Tour._buildRoutes()` 从数据生成，不用改 `index.html`。
+
+### 加一条词条关联
+
+`info.js` 的 `rel` 是 info key 数组：
+
+```js
+taihedian: {
+  py: 'taihedian', pyi: 'thd',
+  rel: ['taihemen', 'zhonghedian', 'baohedian'],
+  name: '太和殿', …
+}
+```
+
+`ui.js` 渲染信息卡时把它们转成中文名按钮。**引用必须存在**，`tools/search-check.js` 会拦悬空 key。
+
+`py` 是拼音全拼（无空格、小写），`pyi` 是首字母串。两者都手写，新增词条时不要漏——搜索的拼音命中完全依赖它们。
+
+### 布局代码的分段
+
+`GG.layout` 内部是五段函数，按原顺序调用：
+
+```
+frontCourt() → palaces() → defenses() → environs() → scatterLayer()
+```
+
+跨段的量只有 `GARDEN_Z`、`HILL`、`hillY`，在 layout 顶部用 `let` 声明、由分段函数赋值。**不要调整调用顺序**：对象创建顺序一变，`?seed=1` 的随机数流就变了，截图基线全部失效。新增建筑时放进对应段函数即可，不要在 `return REG` 前临时追加。
 
 ---
 
