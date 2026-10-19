@@ -25,8 +25,8 @@
 ## 二、脚本加载顺序
 
 ```
-debug → config → i18n → three → sky → water → orbit → renderer → views
-      → labels → picking → ui → tour → textures → geo → buildings
+debug → config → i18n → three → sky → water → weather → orbit → renderer
+      → views → labels → picking → ui → tour → textures → geo → buildings
       → data/info → data/tour → palace → app
 ```
 
@@ -42,7 +42,8 @@ debug → config → i18n → three → sky → water → orbit → renderer →
 | `config.js` | 颜色、曝光、光照、标签阈值、机位表的唯一来源 | `GG.CONFIG` |
 | `i18n.js` | 中英界面文案、分类与字段名翻译 | `GG.i18n`（`t` / `toggle` / `applyStatic`） |
 | `sky.js` | 单 pass 天空材质与穹顶 | `GG.createSky(C, sunDir)` |
-| `water.js` | 水面单例材质：波纹、菲涅耳、日光高光、雾 | `GG.water`（`create` / `sync` / `tick`） |
+| `water.js` | 水面单例材质：波纹、菲涅耳、日光高光、雾、雨滴涟漪 | `GG.water`（`create` / `sync` / `tick` / `setRain`） |
+| `weather.js` | 天候预设：材质色调、雾与云参数、雪 / 雨 / 落叶粒子 | `GG.weather`（`apply` / `tick` / `tint` / `presets`） |
 | `orbit.js` | 球坐标轨道控制、阻尼、触控、平移 | `GG.Orbit`、`syncFromCamera()` |
 | `renderer.js` | 渲染器、相机、环境贴图、光照、雾、`setSun(t)` | `GG.Stage` |
 | `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
@@ -69,11 +70,16 @@ debug → config → i18n → three → sky → water → orbit → renderer →
 | 环境光 | `PMREMGenerator` 从程序化天空场景烘出环境贴图，材质按 `envMapIntensity` 归一 |
 | 天空 | 单 pass 片元着色器：垂直渐变 + 日轮 + 4×4 octave FBM 云 + 地平线灰霾，穹顶每帧跟随相机 |
 | 雾 | `FogExp2`，颜色与天空 haze 同步，天地无缝 |
-| 阴影 | `PCFShadowMap`，4096×4096，正交相机覆盖 ±760 / ±820 |
+| 阴影 | 真机 `PCFSoftShadowMap`，软渲染自动退回 `PCFShadowMap`；4096×4096，正交相机覆盖 ±760 / ±820 |
+| 夜景 | 星场与月轮在天空着色器内完成；平行光夜间切到月光方向；昼 / 夜两套 PMREM 环境贴图按 `night > 0.55` 切换 |
+| 自发光 | 窗纸（`MAT.lattice` 用自身贴图作 `emissiveMap`）与宫灯（16 座 `InstancedMesh`）强度由 `setSun` 按夜晚系数驱动 |
+| 天候 | `GG.weather` 改材质颜色与 `tint`，`setSun` 读取后叠加到天空、雾、云与日照；粒子独立 LCG |
 | 屋面体积 | 屋顶几何输出顶点色 AO（檐口压暗 36%，垄脊略亮） |
-| 水面 | 自写 `ShaderMaterial`：三组余弦波叠加出法线，菲涅耳混天空色与深水色，窄高光做碎金反光，雾按 `FogExp2` 同式手算，随日照联动 |
+| 水面 | 自写 `ShaderMaterial`：三组余弦波叠加出法线，近景补一层 60 米内高频细纹，雨天加格点涟漪；菲涅耳混天空色与深水色，窄高光做碎金反光，雾按 `FogExp2` 同式手算，随日照联动 |
 
-> `PCFSoftShadowMap` 在 SwiftShader 软渲染下不出影，为保证截图回归可用，当前统一用 `PCFShadowMap`。真机与软渲染分环境切换已记入 ROADMAP（v2.2）。
+> **阴影模式为什么按环境切换**：`PCFSoftShadowMap` 在 SwiftShader / llvmpipe 下不出影，截图回归会得到“没有阴影”的假基线。检测到软件渲染时退回 `PCFShadowMap`，真机仍用软阴影；`?shadow=hard|soft` 可强制覆盖。
+>
+> **时间轴**：`t = 0 / 1` 深夜，`0.25` 日出，`0.5` 正午，`0.75` 日落。v2.1 及以前 `0` 与 `1` 都是日出 / 日落，v2.2 为了夜景才改成现在这样。
 
 ---
 

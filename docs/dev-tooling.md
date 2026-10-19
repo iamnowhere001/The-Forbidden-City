@@ -55,6 +55,29 @@ tools/shot.sh out "corner:view=corner&still=1#1500"     # # 后为该张的虚�
 ROOT=/path/to/old-copy tools/shot.sh tools/baseline/v2.0  # 给旧代码目录截图
 ```
 
+### 夜景与天候出图
+
+`?time` 现在是 0/1 深夜、0.25 日出、0.5 正午、0.75 日落。夜景区间是 `t < 0.25` 与 `t > 0.75`，用 `time=night` 直接取 `t=0`。
+
+```bash
+# 夜景：星空、月轮、宫灯、窗纸
+tools/shot.sh tools/after/night \
+  "overview:view=overview&time=night" \
+  "axis:view=axis&time=night" \
+  "garden:view=garden&time=night"
+
+# 三套天候（各出九机位，或只出三张代表机位）
+tools/shot.sh tools/after/snow "axis:view=axis&weather=snow" "overview:view=overview&weather=snow"
+tools/shot.sh tools/after/rain "axis:view=axis&weather=rain"
+tools/shot.sh tools/after/autumn "axis:view=axis&weather=autumn"
+```
+
+天候粒子在 `still=1` 下位置固定，但不影响 `seed=1` 的确定性：粒子随机数走独立 LCG，不消耗 `Math.random`，所以同一 `seed` 下几何与贴图仍可复现。
+
+### 阴影模式
+
+`shot.sh` 不需要额外参数：页面检测到 SwiftShader 会自动用 `PCFShadowMap`（硬边），否则用 `PCFSoftShadowMap`。若要在真机上复现截图效果，加 `?shadow=hard`。
+
 ### 可调环境变量
 
 | 变量 | 默认 | 说明 |
@@ -136,15 +159,18 @@ pillow 不进项目依赖，用临时虚拟环境即可。
 | `v0.9` | 9 | 完整 |
 | `v1.2` | 9 | 完整 |
 | `v2.0` | — | 未归档。当时只出了 2 张（`axis` / `taihe`），不足以做回归，已移出仓库；需要时按下面的 `worktree` 方式从 tag 重建 |
-| `v2.1` | 7 | **缺 `overview` / `close`**，补齐前不能作全量基准 |
+| `v2.1` | 7 | 缺 `overview` / `close`；作为 v2.2 的对比基准时缺两张 |
+| `v2.2` | 0 | **待生成**。v2.2 改了时间轴与阴影模式，v2.1 的图与新代码不再可比 |
 
-v2.1 的七张来自 2026-10-19 的回归出图（`tools/shots/post/`），单独截 `overview` 与 `close` 时无头 Chrome 在软件渲染阶段被系统终止，未完成。补命令：
+> **重要**：v2.2 把 `t` 的语义从“日出到日落”改成“深夜到深夜”，同一 `?time=0.5` 仍是正午，但 `time=0.9` 从“接近日落”变成“入夜”。跨 v2.1 / v2.2 对比截图时必须显式写 `time=noon`，不要用默认值碰运气。
+>
+> 另外 v2.2 新增宫灯与窗纸自发光，即使 `time=noon`（强度为 0）也新增了 16 组实例几何，与 v2.1 的差异不可能只落在“预期位置”。v2.2 的基线应重新生成，不与 v2.1 逐像素对比。
+
+v2.1 的七张来自 2026-10-19 的回归出图（`tools/shots/post/`），单独截 `overview` 与 `close` 时无头 Chrome 在软件渲染阶段被系统终止，未完成。**如果只为 v2.2 建立回归基准，不必补这两张**：v2.2 的时间轴、阴影与几何都变了，应当直接生成 `tools/baseline/v2.2` 九张。
 
 ```bash
-tools/shot.sh tools/baseline/v2.1 "overview:view=overview" "close:view=close"
+tools/shot.sh tools/baseline/v2.2
 ```
-
-补齐后把上表改为 9，并确认 `diff.py` 能逐张对上。
 
 单版基线约 15 MB。仓库只保留“最近一个完整基线 + 两个历史基线”，更早的按需从 tag 重新生成，不长期堆积。
 
