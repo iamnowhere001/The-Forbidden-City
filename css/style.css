@@ -201,6 +201,36 @@ canvas#scene {
   background: rgba(217, 182, 97, 0.1);
 }
 #search::-webkit-search-cancel-button { display: none; }
+
+/* 分类 / 年代过滤 */
+#filters {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+#filters select {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: rgba(242, 234, 217, 0.78);
+  background: rgba(217, 182, 97, 0.06);
+  border: 1px solid rgba(217, 182, 97, 0.2);
+  border-radius: 2px;
+  padding: 4px 6px;
+  cursor: pointer;
+  outline: none;
+}
+#filters select:focus-visible {
+  border-color: var(--gold-dim);
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+#filters select option {
+  background: #1c1611;
+  color: var(--paper);
+}
 #no-result {
   font-size: 11.5px;
   letter-spacing: 0.08em;
@@ -583,6 +613,36 @@ body.hide-ui #info {
   color: rgba(217, 182, 97, 0.8);
 }
 #tour-idx { font-variant-numeric: tabular-nums; }
+
+/* 导览路线切换 */
+.tour-routes {
+  display: flex;
+  gap: 5px;
+}
+.tour-route {
+  border: 1px solid var(--gold-line);
+  background: transparent;
+  color: rgba(217, 182, 97, 0.62);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.tour-route:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+.tour-route.active {
+  color: var(--ink);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.tour-route:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 #tour-title {
   margin: 9px 0 0;
   font-family: "Songti SC", "STSong", "SimSun", serif;
@@ -740,6 +800,44 @@ body.hide-ui #stats { display: none; }
   color: rgba(242, 234, 217, 0.6);
 }
 .info-note[hidden] { display: none; }
+
+/* 相关词条 */
+.info-rel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(217, 182, 97, 0.14);
+}
+.info-rel[hidden] { display: none; }
+.rel-cap {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(217, 182, 97, 0.6);
+}
+.rel-item {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(242, 234, 217, 0.86);
+  background: rgba(217, 182, 97, 0.08);
+  border: 1px solid rgba(217, 182, 97, 0.22);
+  border-radius: 2px;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.rel-item:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  background: rgba(217, 182, 97, 0.14);
+}
+.rel-item:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
 .info-actions {
   display: flex;
   align-items: center;

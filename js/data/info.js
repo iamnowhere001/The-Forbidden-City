@@ -20,6 +20,8 @@
   GG.INFO = {
     /* ---------------- 中轴 · 前朝 ---------------- */
     wumen: {
+      py: 'wumen', pyi: 'wm',
+      rel: ['taihemen'],
       name: '午门', en: 'Meridian Gate', cat: '城防', year: '明永乐十八年（1420）',
       form: '城台开三门，上建重檐庑殿顶正楼，两翼设阙亭',
       scale: '正楼面阔九间',
@@ -27,12 +29,16 @@
       desc: '紫禁城正门，因居子午线正位得名。城台上建五凤楼，平面呈凹字形，两翼各设阙亭。明清两代在此举行颁诏、献俘大典。民间所谓“推出午门斩首”实为误传——明代行刑多在柴市口。'
     },
     taihemen: {
+      py: 'taihemen', pyi: 'thm',
+      rel: ['wumen', 'taihedian'],
       name: '太和门', en: 'Gate of Supreme Harmony', cat: '前朝', year: '明永乐十八年（1420）',
       form: '重檐歇山顶，面阔九间',
       scale: '面阔九间',
       desc: '前朝正门，初名奉天门。重檐歇山顶，面阔九间，是外朝三大殿院落的门户。明代皇帝常在此御门听政，故又称“御门”。'
     },
     taihedian: {
+      py: 'taihedian', pyi: 'thd',
+      rel: ['taihemen', 'zhonghedian', 'baohedian'],
       name: '太和殿', en: 'Hall of Supreme Harmony', cat: '前朝', year: '明永乐十八年（1420）／清康熙三十四年（1695）重建',
       form: '重檐庑殿顶，中国现存最大的木结构殿宇',
       scale: '面阔十一间 63.96 米，进深五间 37.2 米，通高 35.05 米',
@@ -40,46 +46,62 @@
       desc: '俗称金銮殿。面阔十一间 63.96 米，进深五间 37.2 米，通高 35.05 米。重檐庑殿顶，檐角走兽十只，为全国孤例。明清两代登极、大婚、册立、朝贺等大典均在此举行。'
     },
     zhonghedian: {
+      py: 'zhonghedian', pyi: 'zhd',
+      rel: ['taihedian', 'baohedian'],
       name: '中和殿', en: 'Hall of Central Harmony', cat: '前朝', year: '明永乐十八年（1420）',
       form: '单檐四角攒尖顶，方形',
       scale: '面阔、进深各五间',
       desc: '方形四角攒尖顶，取《礼记》“中也者，天下之大本也”之意。皇帝赴太和殿大典前在此小憩，接受执事官员跪拜。'
     },
     baohedian: {
+      py: 'baohedian', pyi: 'bhd',
+      rel: ['zhonghedian', 'qianqingmen'],
       name: '保和殿', en: 'Hall of Preserving Harmony', cat: '前朝', year: '明永乐十八年（1420）',
       form: '重檐歇山顶',
       scale: '面阔九间，进深五间',
       desc: '重檐歇山顶，面阔九间。明代册立皇后、皇太子在此更衣；清代殿试自乾隆朝起固定于此，为“天子门生”的诞生之地。'
     },
     qianqingmen: {
+      py: 'qianqingmen', pyi: 'qqm',
+      rel: ['baohedian', 'qianqinggong'],
       name: '乾清门', en: 'Gate of Heavenly Purity', cat: '后寝', year: '明永乐十八年（1420）',
       form: '单檐歇山顶，门前列鎏金铜狮一对',
       desc: '内廷正门，单檐歇山式。门前列鎏金铜狮一对。清康熙朝起，御门听政移至此，成为实际的政治议事场所。'
     },
     qianqinggong: {
+      py: 'qianqinggong', pyi: 'qqg',
+      rel: ['qianqingmen', 'jiaotaidian'],
       name: '乾清宫', en: 'Palace of Heavenly Purity', cat: '后寝', year: '明永乐十八年（1420）',
       form: '重檐庑殿顶',
       scale: '面阔九间',
       desc: '内廷后三宫之首，重檐庑殿顶，面阔九间。明清十六位皇帝在此居住并处理政务。殿内高悬“正大光明”匾，清代秘密立储的密旨即藏于匾后。'
     },
     jiaotaidian: {
+      py: 'jiaotaidian', pyi: 'jtd',
+      rel: ['qianqinggong', 'kunninggong'],
       name: '交泰殿', en: 'Hall of Union', cat: '后寝', year: '明嘉靖年间',
       form: '单檐四角攒尖顶，方形',
       scale: '面阔、进深各三间',
       desc: '取《易经》“天地交泰”之义，方形攒尖顶。清代皇后在此接受朝贺，殿内珍藏二十五方皇帝御宝，是皇权法统的象征之所。'
     },
     kunninggong: {
+      py: 'kunninggong', pyi: 'kng',
+      rel: ['jiaotaidian', 'kunningmen'],
       name: '坤宁宫', en: 'Palace of Earthly Tranquility', cat: '后寝', year: '明永乐十八年（1420）',
       form: '重檐庑殿顶',
       scale: '面阔九间',
       desc: '明代皇后正宫。清代改建，东暖阁为皇帝大婚洞房，西侧设萨满祭祀神堂，保留了大量满族旧俗。'
     },
     kunningmen: {
+      py: 'kunningmen', pyi: 'knm',
+      rel: ['kunninggong', 'qinandian'],
       name: '坤宁门', en: 'Gate of Earthly Tranquility', cat: '后寝', year: '明代',
       form: '单檐歇山顶',
       desc: '后三宫北面的门户，穿此门即入御花园。单檐歇山顶，是后寝区与御花园之间的过渡。明清两代帝后前往御花园赏景、祭祀，多经此门。'
     },
     shenwumen: {
+      py: 'shenwumen', pyi: 'swm',
+      rel: ['kunningmen', 'shouhuangdian'],
       name: '神武门', en: 'Gate of Divine Prowess', cat: '城防', year: '明永乐十八年（1420）',
       form: '城台开三门，上建重檐庑殿顶门楼',
       scale: '门楼面阔五间',
@@ -89,28 +111,37 @@
 
     /* ---------------- 中轴 · 后寝与花园 ---------------- */
     yuhuayuan: {
+      py: 'yuhuayuan', pyi: 'yhy',
       name: '御花园', en: 'Imperial Garden', cat: '后寝', year: '明永乐十八年（1420）',
       form: '以钦安殿为中心，万春亭、千秋亭东西对称',
       scale: '占地约 1.2 万平方米',
       desc: '明代称宫后苑，占地约 1.2 万平方米。钦安殿居中，万春亭、千秋亭东西对称，堆秀山上御景亭可俯瞰紫禁全城。'
     },
     qinandian: {
+      py: 'qinandian', pyi: 'qad',
+      rel: ['wanchunting', 'qianqiuting'],
       name: '钦安殿', en: 'Hall of Imperial Peace', cat: '后寝', year: '明代',
       form: '重檐盝顶',
       scale: '面阔五间',
       desc: '御花园正中，重檐盝顶，供奉玄天上帝，是紫禁城中轴线上唯一的道教建筑。明清两代帝王常在此设醮祈福。'
     },
     wanchunting: {
+      py: 'wanchunting', pyi: 'wct',
+      rel: ['qianqiuting', 'duixiushan'],
       name: '万春亭', en: 'Pavilion of Ten Thousand Springs', cat: '后寝', year: '明嘉靖十五年（1536）',
       form: '上圆下方，重檐攒尖顶',
       desc: '御花园东侧，上圆下方的重檐亭，取天圆地方之意。明嘉靖十五年（1536）建，与西侧千秋亭对称，是园中重要的点景建筑。'
     },
     qianqiuting: {
+      py: 'qianqiuting', pyi: 'qqt',
+      rel: ['wanchunting', 'qinandian'],
       name: '千秋亭', en: 'Pavilion of a Thousand Autumns', cat: '后寝', year: '明嘉靖十五年（1536）',
       form: '上圆下方，重檐攒尖顶',
       desc: '御花园西侧，与万春亭形制相同、东西对称，共成“春秋永续”之象。上圆下方的重檐攒尖顶，是明代御花园点景建筑的代表。'
     },
     duixiushan: {
+      py: 'duixiushan', pyi: 'dxs',
+      rel: ['wanchunting'],
       name: '堆秀山', en: 'Hill of Accumulated Elegance', cat: '后寝', year: '明万历十一年（1583）',
       form: '太湖石假山，山巅建御景亭',
       desc: '御花园东北隅的太湖石假山，明万历十一年（1583）堆筑，上建御景亭。清代帝后于重阳节登高至此，可俯瞰紫禁城全景。'
@@ -118,11 +149,15 @@
 
     /* ---------------- 前朝两翼 ---------------- */
     tirenge: {
+      py: 'tirenge', pyi: 'trg',
+      rel: ['taihedian', 'hongyige'],
       name: '体仁阁', en: 'Pavilion of Embodying Benevolence', cat: '前朝', year: '明永乐十八年（1420）',
       form: '两层楼阁，重檐歇山顶',
       desc: '太和殿广场东侧的崇楼，重檐歇山顶，两层楼阁。明代曾在此存放缎匹，清代为皇家库房，与西侧弘义阁共同围合出三大殿的仪礼空间。'
     },
     hongyige: {
+      py: 'hongyige', pyi: 'hyg',
+      rel: ['taihedian', 'tirenge'],
       name: '弘义阁', en: 'Pavilion of Spreading Righteousness', cat: '前朝', year: '明永乐十八年（1420）',
       form: '两层楼阁，重檐歇山顶',
       desc: '太和殿广场西侧的崇楼，与体仁阁东西对称。重檐歇山顶，两层楼阁，清代用作皇家库房，是三大殿院落仪礼空间的重要组成。'
@@ -130,84 +165,112 @@
 
     /* ---------------- 东西两路 ---------------- */
     wenhuadian: {
+      py: 'wenhuadian', pyi: 'whd',
+      rel: ['wenyuange', 'fengxiandian'],
       name: '文华殿', en: 'Hall of Literary Glory', cat: '东路', year: '明初／清康熙二十二年（1683）重建',
       form: '单檐歇山顶',
       scale: '面阔五间',
       desc: '明代为太子讲学之所，清代经筵典礼在此举行。殿后文渊阁曾藏《四库全书》，是皇家藏书重地。'
     },
     wuyingdian: {
+      py: 'wuyingdian', pyi: 'wyd',
+      rel: ['nudetang', 'nanxundian'],
       name: '武英殿', en: 'Hall of Martial Valor', cat: '西路', year: '明初',
       form: '单檐歇山顶',
       scale: '面阔五间',
       desc: '清代设修书处于此，所刻“殿本”以纸墨精良、校勘严谨著称。《四库全书》开馆期间，大批典籍在此校订缮写。'
     },
     fengxiandian: {
+      py: 'fengxiandian', pyi: 'fxd',
+      rel: ['wenhuadian'],
       name: '奉先殿', en: 'Hall of Ancestral Worship', cat: '东路', year: '明永乐十八年（1420）',
       form: '重檐庑殿顶',
       scale: '面阔九间',
       desc: '皇家祖庙，供奉明清两代帝后神位。殿内原设暖阁、宝床，四时致祭，是宫中最重要的祭祀场所之一。'
     },
     cininggong: {
+      py: 'cininggong', pyi: 'cng',
+      rel: ['shoukanggong', 'linxiting'],
       name: '慈宁宫', en: 'Palace of Compassion and Tranquility', cat: '西路', year: '明嘉靖十五年（1536）',
       form: '重檐歇山顶',
       scale: '面阔七间',
       desc: '明清两代皇太后的居所。清初孝庄文皇后曾长居于此，是紫禁城内地位最尊的后妃宫殿。现存建筑为清代重修，院落格局宏阔。'
     },
     shoukanggong: {
+      py: 'shoukanggong', pyi: 'skg',
+      rel: ['cininggong', 'shouangong'],
       name: '寿康宫', en: 'Palace of Longevity and Health', cat: '西路', year: '清雍正十三年（1735）',
       form: '单檐歇山顶',
       scale: '面阔五间',
       desc: '乾隆帝为其母崇庆皇太后所建，是清代太后颐养天年的典型院落。前后两进，正殿单檐歇山，是研究清代太后起居制度的重要实例。'
     },
     shouangong: {
+      py: 'shouangong', pyi: 'sag',
+      rel: ['shoukanggong'],
       name: '寿安宫', en: 'Palace of Longevity and Peace', cat: '西路', year: '明初／清乾隆二十五年（1760）改建',
       form: '悬山式滚龙脊顶',
       scale: '面阔五间',
       desc: '明代为咸安宫，乾隆为皇太后在此受贺改建更名，是西路后妃礼佛、居住的院落。前有戏台，中轴线上正殿、寝殿三进相连。'
     },
     linxiting: {
+      py: 'linxiting', pyi: 'lxt',
+      rel: ['cininggong'],
       name: '临溪亭', en: 'Pavilion Facing the Stream', cat: '西路', year: '明代',
       form: '重檐攒尖顶方亭',
       scale: '面阔、进深各三间（示意）',
       desc: '慈宁宫花园中心的水亭，跨于池上。园内花木扶疏、引水成池，是太后与太妃礼佛之余游赏之所，为紫禁城内四座花园之一。'
     },
     ningshougong: {
+      py: 'ningshougong', pyi: 'nsg',
+      rel: ['huangjidian', 'yangxingdian'],
       name: '宁寿宫', en: 'Palace of Tranquil Longevity', cat: '东路', year: '清康熙二十八年（1689）／清乾隆三十七年（1772）改建',
       form: '重檐歇山顶',
       scale: '面阔七间',
       desc: '宁寿宫区以太上皇寝宫为中心的院落。乾隆三十七年改建后成为退位后的起居之所，其后养性殿、乐寿堂依次排列，构成完整的内廷生活空间。'
     },
     yangxingdian: {
+      py: 'yangxingdian', pyi: 'yxd',
+      rel: ['huangjidian', 'leshoutang'],
       name: '养性殿', en: 'Hall of Spiritual Cultivation', cat: '东路', year: '清乾隆三十七年（1772）改建',
       form: '单檐歇山顶',
       scale: '面阔五间',
       desc: '宁寿宫区生活区正殿，乾隆、慈禧太后驻园时都曾在此居住理事。其形制仿养心殿而建，殿内陈设按皇帝日常起居布置。'
     },
     leshoutang: {
+      py: 'leshoutang', pyi: 'lst',
+      rel: ['yangxingdian', 'changyinge'],
       name: '乐寿堂', en: 'Hall of Joyful Longevity', cat: '东路', year: '清乾隆三十七年（1772）改建',
       form: '灰瓦卷棚悬山顶',
       scale: '面阔九间',
       desc: '慈禧太后驻园时的寝宫，与同道堂、颐和轩相连。堂前设庭院与花木，室内陈设富丽，是紫禁城内保存较好的太后起居空间之一。'
     },
     changyinge: {
+      py: 'changyinge', pyi: 'cyg',
+      rel: ['leshoutang', 'juanqinzhai'],
       name: '畅音阁', en: 'Pavilion of Clear Sound', cat: '东路', year: '清乾隆四十一年（1776）',
       form: '重檐三层攒尖顶戏台',
       scale: '面阔、进深各三间',
       desc: '宁寿宫区的三层大戏台，与阅是楼相对，为清代宫廷观戏场所。台上设天井、地井可作升降布景，是紫禁城内保存最完整的宫廷戏台。'
     },
     juanqinzhai: {
+      py: 'juanqinzhai', pyi: 'jqz',
+      rel: ['changyinge', 'fuwangge'],
       name: '倦勤斋', en: 'Studio of Exhaustion', cat: '东路', year: '清乾隆四十一年（1776）',
       form: '勾连搭屋顶',
       scale: '面阔九间（示意）',
       desc: '乾隆倦勤归政计划的书斋，室内以竹黄贴雕装饰，另有通景画与戏台。倦勤斋是清代宫廷装修艺术的代表实例，其修复被视为古建修缮的样板。'
     },
     fuwangge: {
+      py: 'fuwangge', pyi: 'fwg',
+      rel: ['juanqinzhai'],
       name: '符望阁', en: 'Pavilion of the All-Round View', cat: '东路', year: '清乾隆四十一年（1776）',
       form: '重檐攒尖顶方阁',
       scale: '面阔、进深各五间',
       desc: '乾隆花园主建筑，位于园中高处，凭栏可望紫禁城内外。刘敦桢先生评价其为乾隆花园的最佳建筑，其内部装修以缕丝、双面绣等工艺著称。'
     },
     huangjidian: {
+      py: 'huangjidian', pyi: 'hjd',
+      rel: ['ningshougong', 'yangxingdian'],
       name: '皇极殿', en: 'Hall of Imperial Supremacy', cat: '东路', year: '清乾隆三十七年（1772）',
       form: '重檐歇山顶',
       scale: '面阔九间',
@@ -216,40 +279,54 @@
 
     /* ---------------- 城防 ---------------- */
     jiaolou: {
+      py: 'jiaolou', pyi: 'jl',
+      rel: ['donghuamen', 'xihuamen'],
       name: '角楼', en: 'Corner Tower', cat: '城防', year: '明永乐十八年（1420）',
       form: '三重檐十字歇山顶',
       desc: '紫禁城四隅各一，三重檐十字歇山顶，九梁十八柱七十二条脊，是明清官式建筑中结构最精巧的类型之一。'
     },
     donghuamen: {
+      py: 'donghuamen', pyi: 'dhm',
+      rel: ['jiaolou', 'xihuamen'],
       name: '东华门', en: 'East Glorious Gate', cat: '城防', year: '明永乐十八年（1420）',
       form: '城台开三门，上建重檐庑殿顶门楼',
       status: '现属故宫博物院',
       desc: '紫禁城东门，门钉纵九横八，为宫门中的特例。清代帝后灵柩由此出宫，故俗称“鬼门”。门楼建于城台之上，与西华门东西对称。'
     },
     xihuamen: {
+      py: 'xihuamen', pyi: 'xhm',
+      rel: ['jiaolou', 'donghuamen'],
       name: '西华门', en: 'West Glorious Gate', cat: '城防', year: '明永乐十八年（1420）',
       form: '城台开三门，上建重檐庑殿顶门楼',
       desc: '紫禁城西门，清代帝后赴西苑、圆明园多由此出入。门楼建于城台之上，与东华门东西对称，是宫城西侧的主要通道。'
     },
     xiehemen: {
+      py: 'xiehemen', pyi: 'xhm',
+      rel: ['taihedian'],
       name: '协和门', en: 'Gate of Harmony', cat: '前朝', year: '明永乐十八年（1420）',
       form: '单檐歇山顶，面阔五间',
       scale: '面阔五间',
       desc: '太和门广场东侧门，与西侧熙和门对称。初名左顺门，清代改称协和门。嘉靖三年（1524）“大礼议”中，群臣曾在此伏阙撼门痛哭，是明代政治史的重要现场。'
     },
     xihemen: {
+      py: 'xihemen', pyi: 'xhm',
+      rel: ['taihedian'],
       name: '熙和门', en: 'Gate of Blending Harmony', cat: '前朝', year: '明永乐十八年（1420）',
       form: '单檐歇山顶，面阔五间',
       scale: '面阔五间',
       desc: '太和门广场西侧门，与东侧协和门对称。初名右顺门，清代改称熙和门，是朝臣出入前朝的主要通道之一。'
     },
     jingyunmen: {
+      py: 'jingyunmen', pyi: 'jym',
+      rel: ['longzongmen'],
       name: '景运门', en: 'Gate of Visionary Outlook', cat: '后寝', year: '明永乐十八年（1420）',
       form: '单檐歇山顶，随墙门',
       scale: '面阔三间（示意）',
       desc: '乾清门广场东侧门，与西侧隆宗门对称。门内为侍卫值房与内务府各司，清代皇子读书的上书房即在景运门外一带。'
     },
     longzongmen: {
+      py: 'longzongmen', pyi: 'lzm',
+      rel: ['jingyunmen'],
       name: '隆宗门', en: 'Gate of the Lofty Ancestor', cat: '后寝', year: '明永乐十八年（1420）',
       form: '单檐歇山顶，随墙门',
       scale: '面阔三间（示意）',
@@ -258,6 +335,8 @@
 
     /* ---------------- 宫城外 · 中轴延伸与坛庙 ---------------- */
     duanmen: {
+      py: 'duanmen', pyi: 'dm',
+      rel: ['tiananmen', 'wumen'],
       name: '端门', en: 'Upright Gate', cat: '宫外', year: '明永乐十八年（1420）',
       form: '城台开三门，上建重檐歇山顶大殿',
       scale: '城台北面五十九间庑房相连（示意）',
@@ -265,6 +344,8 @@
       desc: '紫禁城正门的第一重，位于天安门与午门之间。城台上建重檐殿宇，不设门扇与门钉，形制与午门相近而规模稍逊。明清两代帝王赴太庙致祭多经此门。'
     },
     tiananmen: {
+      py: 'tiananmen', pyi: 'tam',
+      rel: ['duanmen', 'daqingmen'],
       name: '天安门', en: 'Gate of Heavenly Peace', cat: '宫外', year: '明永乐十八年（1420）／清顺治八年（1651）改建',
       form: '城台开五门，上建重檐歇山顶门楼',
       scale: '城台宽约六十米，通高约三十四米',
@@ -272,6 +353,8 @@
       desc: '北京皇城的正门，取“受命于天”“安邦治民”之意。城台开五门，重檐歇山顶，前有华表、石狮与金水桥。一九四九年十月一日，中华人民共和国开国大典在此举行。'
     },
     daqingmen: {
+      py: 'daqingmen', pyi: 'dqm',
+      rel: ['tiananmen'],
       name: '大清门', en: 'Gate of Great Qing', cat: '宫外', year: '明永乐年间／清顺治元年（1644）改称',
       form: '单檐歇山顶，城台开三门',
       status: '原建筑已不存，场景为示意复原',
@@ -279,6 +362,8 @@
       desc: '京师正阳门内、皇城最南端的门，明代称大明门，清代改称大清门，民国初改中华门。门内千步廊迤逦向北直达天安门，为御路要冲。'
     },
     taimiao: {
+      py: 'taimiao', pyi: 'tm',
+      rel: ['tiananmen'],
       name: '太庙', en: 'Imperial Ancestral Temple', cat: '宫外', year: '明永乐十八年（1420）',
       form: '重檐庑殿顶享殿，前有戟门、戟门内三殿并列',
       scale: '享殿面阔十一间',
@@ -286,12 +371,16 @@
       desc: '明清两代皇帝祭祖的宗庙，位于午门东侧、中轴东面，与社稷坛分居御路两旁。前殿以金丝楠木柱列著称，是我国现存规模最大的皇家宗庙建筑群。'
     },
     shejitan: {
+      py: 'shejitan', pyi: 'sjt',
+      rel: ['tiananmen'],
       name: '社稷坛', en: 'Altar of Land and Grain', cat: '宫外', year: '明永乐十八年（1420）',
       form: '三层方坛，坛面筑五色土',
       status: '现为中山公园，一九二八年辟为公园',
       desc: '明清两代祭祀社神与稷神的祭坛，与太庙东西对置，体现“左祖右社”的礼制。坛面按东青、南赤、中黄、西白、北黑五方铺土，坛中社主石象征江山永固。'
     },
     shouhuangdian: {
+      py: 'shouhuangdian', pyi: 'shd',
+      rel: ['shenwumen'],
       name: '寿皇殿', en: 'Hall of Imperial Longevity', cat: '宫外', year: '明永乐十八年（1420）／清乾隆十五年（1750）重建',
       form: '重檐歇山顶，前有戟门与宝坊',
       status: '现为故宫博物院展览与研究场所',
@@ -300,6 +389,8 @@
 
     /* ---------------- 东六宫 ---------------- */
     jingrengong: {
+      py: 'jingrengong', pyi: 'jrg',
+      rel: ['chengqiangong', 'yongshougong'],
       name: '景仁宫', en: 'Palace of Great Benevolence', cat: '东路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -307,6 +398,8 @@
       desc: '东六宫之一，初名长安宫，嘉靖十四年（1535）改今名。清顺治十一年（1654），康熙帝玄烨生于此宫。清代沿用为妃嫔居所。'
     },
     chengqiangong: {
+      py: 'chengqiangong', pyi: 'cqg',
+      rel: ['jingrengong', 'zhongcuigong'],
       name: '承乾宫', en: 'Palace of Celestial Favor', cat: '东路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -314,6 +407,8 @@
       desc: '东六宫之一，明初名永宁宫，嘉靖十四年（1535）改称承乾宫。清顺治年间，孝献皇后董鄂氏居此，是清初宫廷史的重要现场。'
     },
     zhongcuigong: {
+      py: 'zhongcuigong', pyi: 'zcg',
+      rel: ['chengqiangong', 'yanxigong'],
       name: '钟粹宫', en: 'Palace of Purity', cat: '东路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -321,6 +416,8 @@
       desc: '东六宫之一，明初名咸阳宫，嘉靖十四年（1535）改今名。明代曾为皇太子居所，清代为妃嫔居所，咸丰帝孝贞显皇后（慈安）曾居于此。'
     },
     yanxigong: {
+      py: 'yanxigong', pyi: 'yxg',
+      rel: ['zhongcuigong', 'yonghegong'],
       name: '延禧宫', en: 'Palace of Prolonged Happiness', cat: '东路', year: '明永乐十八年（1420）',
       form: '院落格局，正殿已毁，现存灵沼轩',
       status: '遗址与灵沼轩并存',
@@ -328,6 +425,8 @@
       desc: '东六宫之一，明初名长寿宫，嘉靖十四年（1535）改今名。道光二十五年（1845）火灾，正殿焚毁。宣统元年（1909）在旧址兴建西式建筑“灵沼轩”，未及完工而清亡。'
     },
     yonghegong: {
+      py: 'yonghegong', pyi: 'yhg',
+      rel: ['yanxigong', 'jingyanggong'],
       name: '永和宫', en: 'Palace of Eternal Harmony', cat: '东路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -335,6 +434,8 @@
       desc: '东六宫之一，明初名永安宫，嘉靖十四年（1535）改今名。清雍正帝生母孝恭仁皇后（德妃）曾居此，光绪帝瑾妃亦居于此。'
     },
     jingyanggong: {
+      py: 'jingyanggong', pyi: 'jyg',
+      rel: ['yonghegong'],
       name: '景阳宫', en: 'Palace of Sunlight', cat: '东路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -344,6 +445,8 @@
 
     /* ---------------- 西六宫 ---------------- */
     yongshougong: {
+      py: 'yongshougong', pyi: 'ysg',
+      rel: ['yikungong', 'jingrengong'],
       name: '永寿宫', en: 'Palace of Eternal Longevity', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -351,6 +454,8 @@
       desc: '西六宫之一，明初名长乐宫，嘉靖十四年（1535）改今名。明清两代均为妃嫔居所，清代屡有修缮。'
     },
     yikungong: {
+      py: 'yikungong', pyi: 'ykg',
+      rel: ['yongshougong', 'chuxiugong'],
       name: '翊坤宫', en: 'Palace of Earthly Honor', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -358,6 +463,8 @@
       desc: '西六宫之一，明初名万安宫，嘉靖十四年（1535）改今名。明清两代为妃嫔居所。晚清时与储秀宫连通，成为慈禧太后宫廷生活区的一部分。'
     },
     chuxiugong: {
+      py: 'chuxiugong', pyi: 'cxg',
+      rel: ['yikungong', 'qixianggong'],
       name: '储秀宫', en: 'Palace of Gathered Elegance', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -366,6 +473,8 @@
       desc: '西六宫之一，明初名寿昌宫，嘉靖十四年（1535）改今名。咸丰二年（1852）慈禧入宫后居此，咸丰六年（1856）在此诞同治帝。光绪十年（1884）为慈禧五十寿辰大修，与翊坤宫连通。'
     },
     qixianggong: {
+      py: 'qixianggong', pyi: 'qxg',
+      rel: ['chuxiugong', 'changchungong'],
       name: '启祥宫', en: 'Palace of Auspicious Omens', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -373,6 +482,8 @@
       desc: '西六宫之一，明初名未央宫，嘉靖十四年（1535）改称启祥宫，清晚期改称太极殿。明清两代为妃嫔居所。'
     },
     changchungong: {
+      py: 'changchungong', pyi: 'ccg',
+      rel: ['qixianggong', 'xianfugong'],
       name: '长春宫', en: 'Palace of Eternal Spring', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -380,6 +491,8 @@
       desc: '西六宫之一，明初称长春宫，嘉靖年间改名永宁宫，清代复名长春宫。慈禧太后曾居此。院内回廊保留晚清《红楼梦》题材壁画十八幅，是宫内仅存的长篇壁画。'
     },
     xianfugong: {
+      py: 'xianfugong', pyi: 'xfg',
+      rel: ['changchungong'],
       name: '咸福宫', en: 'Palace of Universal Happiness', cat: '西路', year: '明永乐十八年（1420）',
       form: '两进院落，正殿黄琉璃瓦歇山顶',
       scale: '正殿面阔五间（示意）',
@@ -389,6 +502,8 @@
 
     /* ---------------- 内廷两侧（后补） ---------------- */
     yangxindian: {
+      py: 'yangxindian', pyi: 'yxd',
+      rel: ['junjichu', 'zhaorendian'],
       name: '养心殿', en: 'Hall of Mental Cultivation', cat: '西路', year: '明嘉靖年间／清雍正年间重修',
       form: '工字形殿，前殿单檐歇山顶，后殿以穿堂相连',
       scale: '前殿面阔三间（示意）',
@@ -396,26 +511,36 @@
       desc: '乾清宫西侧的内廷院落。雍正帝由乾清宫移居于此，此后八位皇帝沿袭，成为清代中后期实际的寝宫与理政之所。“中正仁和”匾下即批阅奏章、召对臣工之处，三希堂、东暖阁均在此院内。'
     },
     junjichu: {
+      py: 'junjichu', pyi: 'jjc',
+      rel: ['yangxindian'],
       name: '军机处', en: 'Grand Council', cat: '后寝', year: '清雍正七年（1729）',
       form: '隆宗门内值房，硬山顶连房',
       desc: '雍正七年因西北用兵而设，初名“军机房”，后改称军机处。屋宇虽为低矮值房，却是清代最高的参谋与承旨机构，军机大臣每日在此入值拟旨，权倾一时。'
     },
     zhaigong: {
+      py: 'zhaigong', pyi: 'zg',
+      rel: ['yuqingong'],
       name: '斋宫', en: 'Palace of Abstinence', cat: '东路', year: '明永乐十八年（1420）／清雍正年间改建',
       form: '前后两进，正殿单檐歇山顶',
       desc: '皇帝行大祀前的斋戒之所。清雍正以后斋宫自别处移入内廷东路，冬至祭天、孟春祈谷等大祀之前，皇帝在此斋居数日，以示诚敬。'
     },
     yuqingong: {
+      py: 'yuqingong', pyi: 'yqg',
+      rel: ['zhaigong'],
       name: '毓庆宫', en: 'Palace of Cultivating Celebration', cat: '东路', year: '清康熙十八年（1679）',
       form: '前后两进院落，正殿歇山顶',
       desc: '康熙为皇太子所建，后定为皇子读书、居住之所。嘉庆、道光、咸丰、同治、光绪诸帝均曾在此读书，因而有“帝王摇篮”之说。'
     },
     zhaorendian: {
+      py: 'zhaorendian', pyi: 'zrd',
+      rel: ['hongdedian', 'yangxindian'],
       name: '昭仁殿', en: 'Hall of Illustrious Benevolence', cat: '后寝', year: '明代',
       form: '乾清宫东侧小殿，单檐歇山顶',
       desc: '乾清宫东侧的小殿，与西侧弘德殿对峙。清代曾在此贮藏宋元旧椠，乾隆题“天禄琳琅”，是宫中的善本藏书处。'
     },
     hongdedian: {
+      py: 'hongdedian', pyi: 'hdd',
+      rel: ['zhaorendian'],
       name: '弘德殿', en: 'Hall of Spreading Virtue', cat: '后寝', year: '明代',
       form: '乾清宫西侧小殿，单檐歇山顶',
       desc: '乾清宫西侧的小殿，与东侧昭仁殿对峙。明清两代皇帝常在此办理政务、进膳与召见，是乾清宫院落中的日常起居之殿。'
@@ -423,22 +548,26 @@
 
     /* ---------------- 东西两路（后补） ---------------- */
     wenyuange: {
+      py: 'wenyuange', pyi: 'wyg',
       name: '文渊阁', en: 'Pavilion of Literary Profundity', cat: '东路', year: '清乾隆四十一年（1776）',
       form: '仿天一阁形制，外观两层、内分三层，黑琉璃瓦绿剪边',
       scale: '面阔六间（示意）',
       desc: '文华殿后专为收藏《四库全书》而建的皇家藏书楼。仿宁波天一阁，“天一生水”，以黑瓦主水克火。第一份《四库全书》即藏于此，是宫中最重要的典籍之所。'
     },
     zhuijingdian: {
+      py: 'zhujingdian', pyi: 'zjd',
       name: '主敬殿', en: 'Hall of Holding Reverence', cat: '东路', year: '明代',
       form: '文华殿后殿，单檐歇山顶',
       desc: '文华殿之后的寝殿，与文渊阁相连，共同构成文华殿院的完整进深。经筵前后，皇帝讲官常在此稍事休息、备礼。'
     },
     nudetang: {
+      py: 'nudetang', pyi: 'ydt',
       name: '浴德堂', en: 'Hall of Bathing in Virtue', cat: '西路', year: '明代',
       form: '武英殿后小殿，单檐歇山顶',
       desc: '武英殿后的小殿，殿内设穹顶浴室，是紫禁城中罕见的阿拉伯式建筑。清代修书处设于武英殿，此堂亦为校书诸臣所居之处。'
     },
     nanxundian: {
+      py: 'nanxundian', pyi: 'nxd',
       name: '南薰殿', en: 'Hall of Southern Fragrance', cat: '西路', year: '明代',
       form: '单檐歇山顶',
       desc: '武英殿东南的独立小殿，取《诗经》“南风之薰”之意。清代专藏历代帝王后妃画像，是宫中最著名的图像收藏处。'
@@ -446,31 +575,37 @@
 
     /* ---------------- 外东路 / 外西路（后补） ---------------- */
     nansansuo: {
+      py: 'nansansuo', pyi: 'nss',
       name: '南三所', en: 'Three Southern Institutes', cat: '东路', year: '清乾隆年间',
       form: '三所并列的皇子居所，绿琉璃瓦歇山顶',
       desc: '外东路东侧的皇子居所，因屋顶覆绿琉璃瓦，俗称“阿哥所”。三所院落并排而坐，各成两进，是清代皇子成长起居之处。'
     },
     shangsiyuan: {
+      py: 'shangsiyuan', pyi: 'ssy',
       name: '上驷院', en: 'Court of the Imperial Stud', cat: '东路', year: '清初',
       form: '院落式衙署',
       desc: '掌管御用马匹、驼只的机构，隶属内务府，负责皇帝出行、祭祀与围猎所需马匹的饲养与调用。箭亭即在其近旁，便于骑射。'
     },
     jianting: {
+      py: 'jianting', pyi: 'jt',
       name: '箭亭', en: 'Arrow Pavilion', cat: '东路', year: '清雍正年间',
       form: '四面出廊的方殿，单檐歇山顶',
       desc: '皇帝与王公练习骑射、检阅侍卫的场所，又称“射亭”。殿四面开门而不设窗墙，以便驰马放箭，是清廷保持满族尚武传统而设的建筑。'
     },
     xianangong: {
+      py: 'xianangong', pyi: 'xag',
       name: '咸安宫', en: 'Palace of Universal Peace', cat: '西路', year: '明初／清乾隆年间',
       form: '院落式殿堂',
       desc: '明代为太后、太妃居所，清代曾设咸安宫官学于此，选八旗子弟入学肄业，兼习满汉文与骑射，是清代培养旗人子弟的重要处所。'
     },
     yinghuadian: {
+      py: 'yinghuadian', pyi: 'yhd',
       name: '英华殿', en: 'Hall of Flourishing Flowers', cat: '西路', year: '明万历年间',
       form: '单檐歇山顶',
       desc: '明清太后、太妃礼佛之所。殿前原有菩提树两株，传为明万历太后所植，是紫禁城内最古老的佛堂之一。'
     },
     neiwufu: {
+      py: 'neiwufu', pyi: 'nwf',
       name: '内务府', en: 'Imperial Household Department', cat: '西路', year: '清初',
       form: '院落式衙署',
       desc: '总管皇室财政与宫禁事务的机构。宫中吃穿用度、营造修缮、祭祀赏赉无不由其经办，下辖七司三院，是清代宫廷日常运转的中枢。'

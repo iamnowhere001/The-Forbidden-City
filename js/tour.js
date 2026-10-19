@@ -1,7 +1,8 @@
 /* ============================================================
    导览播放器
-   路线来自 GG.TOUR，机位来自 views.spotFor()，
+   路线来自 GG.TOUR.routes，机位来自 views.spotFor()，
    所以导览与“聚焦”按钮的构图始终一致。
+   支持多路线切换：切换后从该线第 1 站重新开始。
    ============================================================ */
 (function () {
   const GG = (window.GG = window.GG || {});
@@ -13,7 +14,10 @@
     this.onExit = opts.onExit || function () {};
     this.onFinish = opts.onFinish || function () {};
 
-    this.stops = (GG.TOUR && GG.TOUR.stops) || [];
+    this.routes = (GG.TOUR && GG.TOUR.routes) || [];
+    this.routeIndex = 0;
+    this.route = this.routes[0] || { stops: [], title: { zh: '', en: '' } };
+    this.stops = this.route.stops || [];
     this.i = -1;
     this.active = false;
     this.playing = false;
@@ -28,20 +32,68 @@
       prev: document.getElementById('tour-prev'),
       play: document.getElementById('tour-play'),
       next: document.getElementById('tour-next'),
-      exit: document.getElementById('tour-exit')
+      exit: document.getElementById('tour-exit'),
+      routes: document.getElementById('tour-routes')
     };
 
     this.els.prev.addEventListener('click', () => this.prev());
     this.els.play.addEventListener('click', () => this.toggle());
     this.els.next.addEventListener('click', () => this.next());
     this.els.exit.addEventListener('click', () => this.stop());
+
+    this._buildRoutes();
   }
+
+  /* 路线 tab：从 routes 数据生成，不写死按钮 */
+  Tour.prototype._buildRoutes = function () {
+    const box = this.els.routes;
+    if (!box) return;
+    box.innerHTML = '';
+    this.routes.forEach((r) => {
+      const b = document.createElement('button');
+      b.className = 'tour-route';
+      b.type = 'button';
+      b.dataset.route = r.id;
+      b.setAttribute('role', 'tab');
+      b.addEventListener('click', () => this.setRoute(r.id));
+      box.appendChild(b);
+    });
+    this._syncRoutes();
+  };
+
+  Tour.prototype._syncRoutes = function () {
+    const box = this.els.routes;
+    if (!box) return;
+    const lang = GG.i18n.lang;
+    for (const b of box.querySelectorAll('.tour-route')) {
+      const r = this.routes.find((x) => x.id === b.dataset.route);
+      if (!r) continue;
+      b.textContent = (r.short && (lang === 'en' ? r.short.en : r.short.zh)) || r.id;
+      b.setAttribute('aria-selected', String(r.id === this.route.id));
+      b.classList.toggle('active', r.id === this.route.id);
+      b.setAttribute('aria-label', lang === 'en' ? r.title.en : r.title.zh);
+    }
+    if (this.root) {
+      this.root.setAttribute('aria-label', lang === 'en' ? this.route.title.en : this.route.title.zh);
+    }
+  };
+
+  Tour.prototype.setRoute = function (id) {
+    const idx = this.routes.findIndex((r) => r.id === id);
+    if (idx < 0) return;
+    this.routeIndex = idx;
+    this.route = this.routes[idx];
+    this.stops = this.route.stops || [];
+    this._syncRoutes();
+    if (this.active) this._go(0);
+  };
 
   Tour.prototype.start = function () {
     if (!this.stops.length) return;
     this.active = true;
     this.root.hidden = false;
     document.body.classList.add('tour-on');
+    this._syncRoutes();
     this._go(0);
   };
 
@@ -78,6 +130,7 @@
     this.els.text.textContent = lang === 'en' ? stop.en : stop.zh;
     this.els.bar.style.width = ((this.i + 1) / total) * 100 + '%';
     this._labelPlay();
+    this._syncRoutes();
   };
 
   Tour.prototype._labelPlay = function () {
@@ -131,8 +184,9 @@
     this.onFinish();
   };
 
-  /** 语言切换后重绘当前站 */
+  /** 语言切换后重绘当前站与路线 tab */
   Tour.prototype.refresh = function () {
+    this._syncRoutes();
     if (!this.active || this.i < 0) return;
     const stop = this.stops[this.i];
     const entry = this.findEntry(stop.target);

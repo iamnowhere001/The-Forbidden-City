@@ -34,6 +34,22 @@
   </div>
   <div id="search-wrap">
     <input id="search" type="search" autocomplete="off" placeholder="搜索宫殿" aria-label="搜索宫殿">
+    <div id="filters">
+      <select id="filter-cat" aria-label="按分类过滤">
+        <option value="" data-zh="全部分类" data-en="All areas">全部分类</option>
+        <option value="前朝" data-zh="前朝" data-en="Outer Court">前朝</option>
+        <option value="后寝" data-zh="后寝" data-en="Inner Court">后寝</option>
+        <option value="东路" data-zh="东路" data-en="East Route">东路</option>
+        <option value="西路" data-zh="西路" data-en="West Route">西路</option>
+        <option value="城防" data-zh="城防" data-en="Defense">城防</option>
+        <option value="宫外" data-zh="宫外" data-en="Environs">宫外</option>
+      </select>
+      <select id="filter-era" aria-label="按年代过滤">
+        <option value="" data-zh="全部年代" data-en="All eras">全部年代</option>
+        <option value="明" data-zh="明" data-en="Ming">明</option>
+        <option value="清" data-zh="清" data-en="Qing">清</option>
+      </select>
+    </div>
   </div>
   <div id="list"></div>
   <div id="no-result" hidden data-zh="没有匹配的宫殿" data-en="No matching building">没有匹配的宫殿</div>
@@ -55,7 +71,7 @@
     <button class="tool mini" id="btn-tplay" aria-pressed="false" title="昼夜流转" aria-label="昼夜流转" data-title-zh="昼夜流转（约 90 秒一昼夜）" data-title-en="Animate the day cycle (about 90s)">▶</button>
   </div>
   <div class="sep"></div>
-  <button class="tool" id="btn-tour" title="开始中轴导览" aria-label="开始中轴导览" data-title-zh="开始中轴导览" data-title-en="Start the guided tour" data-zh="导览" data-en="Tour">导览</button>
+  <button class="tool" id="btn-tour" title="开始导览" aria-label="开始导览" data-title-zh="开始导览" data-title-en="Start the guided tour" data-zh="导览" data-en="Tour">导览</button>
   <button class="tool" id="btn-share" title="复制当前视角链接" aria-label="复制当前视角链接" data-title-zh="复制当前视角链接" data-title-en="Copy a link to this view" data-zh="分享" data-en="Share">分享</button>
   <button class="tool" id="btn-shot" title="保存当前画面" aria-label="保存当前画面" data-title-zh="保存当前画面" data-title-en="Save this view as PNG" data-zh="存图" data-en="Save">存图</button>
   <div class="sep"></div>
@@ -92,7 +108,7 @@
 <section id="tour" role="region" aria-live="polite" aria-label="中轴导览" hidden>
   <div class="tour-head">
     <span id="tour-idx">01 / 12</span>
-    <span class="tour-cap" data-zh="中轴导览" data-en="The Central Axis">中轴导览</span>
+    <div id="tour-routes" class="tour-routes" role="tablist" aria-label="导览路线"></div>
   </div>
   <h3 id="tour-title"></h3>
   <p id="tour-text"></p>
@@ -117,6 +133,7 @@
     <summary data-zh="史料与考据" data-en="Notes & Sources">史料与考据</summary>
     <p id="info-note-text"></p>
   </details>
+  <div id="info-rel" class="info-rel" hidden></div>
   <div class="info-actions">
     <button id="info-focus" data-zh="聚 焦" data-en="Focus">聚 焦</button>
     <div class="info-nav">

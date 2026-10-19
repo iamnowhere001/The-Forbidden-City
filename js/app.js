@@ -265,9 +265,14 @@
         desc: document.getElementById('info-desc'),
         meta: document.getElementById('info-meta'),
         note: document.getElementById('info-note'),
-        noteText: document.getElementById('info-note-text')
+        noteText: document.getElementById('info-note-text'),
+        rel: document.getElementById('info-rel')
       },
-      onPick: focusBuilding
+      onPick: focusBuilding,
+      onRel: (name) => {
+        const entry = registry.find((x) => x.userData.info && x.userData.info.name === name);
+        if (entry) focusBuilding(entry);
+      }
     });
 
     stage = new GG.Stage(canvas);

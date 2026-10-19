@@ -28,14 +28,19 @@
     this.listEl = opts.listEl;
     this.els = opts.els;               // { info, name, en, cat, year, desc }
     this.onPick = opts.onPick || function () {};
+    this.onRel = opts.onRel || function () {};
     this.items = [];                   // 与侧栏顺序一致的建筑组
     this.byName = new Map();
     this.registry = [];
     this.current = null;
     this.query = '';
+    this.filterCat = '';
+    this.filterEra = '';
     this.visited = loadVisited();
 
     this.searchEl = document.getElementById('search');
+    this.catEl = document.getElementById('filter-cat');
+    this.eraEl = document.getElementById('filter-era');
     this.noResultEl = document.getElementById('no-result');
     this.countEl = document.getElementById('read-count');
 
@@ -52,6 +57,27 @@
           this.query = '';
           this.applyFilter();
         }
+      });
+    }
+
+    if (this.catEl) {
+      this.catEl.addEventListener('change', () => {
+        this.filterCat = this.catEl.value;
+        this.applyFilter();
+      });
+    }
+    if (this.eraEl) {
+      this.eraEl.addEventListener('change', () => {
+        this.filterEra = this.eraEl.value;
+        this.applyFilter();
+      });
+    }
+
+    /* 相关词条：事件委托，避免每次 show 重新绑定 */
+    if (this.els.rel) {
+      this.els.rel.addEventListener('click', (e) => {
+        const b = e.target.closest('.rel-item');
+        if (b) this.onRel(b.dataset.name);
       });
     }
   }
@@ -77,6 +103,8 @@
         seen.add(info.name);
         const visited = this.visited.has(info.name) ? ' visited' : '';
         html += `<div class="li${visited}" data-name="${info.name}" data-en="${info.en || ''}"` +
+          ` data-py="${info.py || ''}" data-pyi="${info.pyi || ''}"` +
+          ` data-cat="${info.cat || ''}" data-year="${(info.year || '').replace(/"/g, '')}"` +
           ` role="button" tabindex="0" aria-label="${info.name}"><span class="dot"></span>${info.name}</div>`;
       }
     }
@@ -106,22 +134,28 @@
     });
 
     if (this.searchEl) {
-      this.searchEl.placeholder = GG.i18n.t('搜索宫殿', 'Search');
-      this.searchEl.setAttribute('aria-label', GG.i18n.t('搜索宫殿', 'Search'));
+      this.searchEl.placeholder = GG.i18n.t('搜索宫殿 / 拼音', 'Search name or pinyin');
+      this.searchEl.setAttribute('aria-label', GG.i18n.t('搜索宫殿 / 拼音', 'Search name or pinyin'));
       this.searchEl.value = this.query;
     }
     this.applyFilter();
     this.updateCount();
   };
 
-  /** 搜索过滤：命中中文名或英文名；分类标题随整组隐藏 */
+  /** 过滤：中文名 / 英文名 / 拼音全拼 / 拼音首字母，再叠加分类与年代 */
   UI.prototype.applyFilter = function () {
     const q = this.query;
     let shown = 0;
     for (const li of this.listEl.querySelectorAll('.li')) {
-      const match = !q
-        || li.dataset.name.toLowerCase().includes(q)
-        || (li.dataset.en || '').toLowerCase().includes(q);
+      const d = li.dataset;
+      const textHit = !q
+        || d.name.toLowerCase().includes(q)
+        || (d.en || '').toLowerCase().includes(q)
+        || (d.py || '').includes(q)
+        || (d.pyi || '').includes(q);
+      const catHit = !this.filterCat || d.cat === this.filterCat;
+      const eraHit = !this.filterEra || (d.year || '').includes(this.filterEra);
+      const match = textHit && catHit && eraHit;
       li.classList.toggle('hidden', !match);
       if (match) shown++;
     }
@@ -204,6 +238,20 @@
       this.els.note.open = false;
     } else {
       this.els.note.hidden = true;
+    }
+
+    /* 相关词条：rel 存的是 info key，渲染成可点的按钮 */
+    const relBox = this.els.rel;
+    if (relBox) {
+      const list = (info.rel || []).map((k) => GG.INFO[k]).filter(Boolean);
+      if (list.length) {
+        relBox.hidden = false;
+        relBox.innerHTML = '<span class="rel-cap">' + esc(GG.i18n.t('相关', 'Related')) + '</span>' +
+          list.map((x) => `<button type="button" class="rel-item" data-name="${esc(x.name)}">${esc(x.name)}</button>`).join('');
+      } else {
+        relBox.hidden = true;
+        relBox.innerHTML = '';
+      }
     }
 
     this.els.info.classList.add('open');
