@@ -54,7 +54,7 @@
       vec3 ip = floor(p);
       vec3 fp = fract(p);
       float h = hash3(ip);
-      float present = step(0.9962, h);
+      float present = step(0.9955, h);
       vec3 off = vec3(0.25) + 0.5 * vec3(hash3(ip + 11.0), hash3(ip + 23.0), hash3(ip + 37.0));
       float dist = length(fp - off);
       float core = smoothstep(0.20, 0.0, dist);
@@ -77,7 +77,7 @@
       if (nightAmt > 0.002) {
         float s = starField(d);
         // 顶部更密、近地平线被灰霾吃掉
-        c += vec3(0.82, 0.88, 1.0) * s * nightAmt * 1.35;
+        c += vec3(0.82, 0.88, 1.0) * s * nightAmt * 1.8;
       }
 
       /* ---------- 月亮 ---------- */

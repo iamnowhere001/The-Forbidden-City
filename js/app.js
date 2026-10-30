@@ -22,6 +22,14 @@
   let statsEl = null;                  // ?stats=1 性能面板
   let statsAcc = 0;
   let statsFrames = 0;
+  /* 动态分辨率：每秒结算帧率，掉帧先降渲染倍率，稳定后再升回 */
+  const DRS = C.quality.drs;
+  const drs = { i: 0, acc: 0, frames: 0, good: 0 };
+  /* 悬停拾取节流：pointermove 只记坐标，实际拾取每帧至多一次
+     （射线检测要过全部建筑组，鼠标快动时一帧多次纯浪费） */
+  let hoverX = -1, hoverY = -1, hoverDirty = false;
+  /* 点击抑制：按下到松开位移超过 6px 视为拖拽，不再触发选择 / 关闭 */
+  let downX = 0, downY = 0, downMoved = false;
   const _v3 = new THREE.Vector3();
 
   const dom = {};
@@ -40,6 +48,7 @@
     selected = entry;
     ui.show(entry.userData.info || {});
     picker.setHover(entry);
+    picker.setSelected(entry);
   }
 
   function focusBuilding(entry) {
@@ -61,6 +70,7 @@
     selected = null;
     ui.hide();
     picker.setHover(null);
+    picker.setSelected(null);
   }
 
   /* ============================================================
@@ -232,12 +242,15 @@
     const fps = statsFrames / statsAcc;
     const ms = (statsAcc * 1000) / statsFrames;
     const tri = info.render.triangles;
-    statsEl.textContent =
-      'fps  ' + fps.toFixed(0).padStart(3) + '   ' + ms.toFixed(1) + ' ms\n' +
+    const cls = fps >= 50 ? 'st-ok' : fps >= 30 ? 'st-warn' : 'st-bad';
+    statsEl.innerHTML =
+      'fps  <span class="' + cls + '">' + fps.toFixed(0).padStart(3) + '</span>   ' + ms.toFixed(1) + ' ms\n' +
       'draw ' + String(info.render.calls).padStart(3) +
       '   tri ' + (tri >= 1000 ? (tri / 1000).toFixed(0) + 'k' : String(tri)) + '\n' +
       'geo  ' + String(info.memory.geometries).padStart(3) +
-      '   tex ' + info.memory.textures;
+      '   tex ' + info.memory.textures + '\n' +
+      'res  ' + stage.resolutionScale().toFixed(2) +
+      '   shdw ' + (stage.renderer.shadowMap.autoUpdate ? 'auto' : 'on-demand');
     statsAcc = 0;
     statsFrames = 0;
   }
@@ -247,7 +260,14 @@
      ============================================================ */
   function init() {
     const canvas = document.getElementById('scene');
-    setStep('起 基', 12);
+    /* ?nofade=1：截图回归专用。加载层直接隐藏，不等 0.9s 淡出——
+       虚拟时间预算下 CSS 过渡不跟虚拟钟走，会把加载层截进画面。 */
+    if (GG.query.get('nofade') === '1') {
+      const l = document.getElementById('loader');
+      l.style.transition = 'none';
+      l.style.display = 'none';
+    }
+    setStep('相 地', 8);
 
     dom.canvas = canvas;
     dom.labels = document.getElementById('labels');
@@ -283,11 +303,42 @@
       canvas, camera: stage.camera, scene: stage.scene, registry: []
     });
 
-    registry = GG.layout(stage.scene);
+    /* 布局分五段进行、段间让出主线程：加载条反映真实进度 */
+    runLayout(canvas);
+  }
+
+  /* 布局各段的加载文案（与 palace.js 的 step 百分比对应） */
+  function loadLabel(pct) {
+    if (pct <= 30) return '相 地';
+    if (pct <= 52) return '前 朝';
+    if (pct <= 66) return '宫 阙';
+    if (pct <= 74) return '城 垣';
+    if (pct <= 82) return '坛 庙';
+    if (pct <= 94) return '林 木';
+    return '宫 灯';
+  }
+
+  async function runLayout(canvas) {
+    registry = await GG.layout(stage.scene, (pct) => setStep(loadLabel(pct), pct));
     picker.registry = registry;
-    setStep('覆 瓦', 72);
     stage.scene.updateMatrixWorld(true);
     stage.normalizeEnvIntensity(0.22);
+    /* 静态合并：殿身 / 院墙 / 铺装按（材质 × 投影 × 受影）分桶合成，
+       逐像素等价（顶点色与 UV 原样携带），draw call 大幅下降 */
+    window.__mark && window.__mark('pre-merge');
+    window.__cap = true;
+    GG.geo.optimizeStatics(stage.scene);
+    /* 第二遍跨组合并：城墙、地坪、坛墙这类不参与拾取的静态块
+       按材质烘成世界坐标合批，draw call 再降一个量级 */
+    window.__mark && window.__mark('pre-worldmerge');
+    const mergedWorld = GG.geo.mergeWorldStatics(stage.scene);
+    window.__mark && window.__mark('post-worldmerge');
+    GG.debug.worldMerged = mergedWorld;
+    window.__cap = false;
+    window.__mark && window.__mark('post-merge');
+    /* 晨 / 暮环境贴图补烘：放在布局后，保证布局期随机流与旧版一致 */
+    stage.bakeDawnEnvs();
+    setStep('铺 陈', 97);
 
     orbit = new GG.Orbit(stage.camera, canvas);
     const boot = C.orbit.boot;
@@ -309,7 +360,6 @@
     });
     labels.build(registry);
     ui.build(registry);
-    setStep('铺 陈', 90);
 
     views = new GG.Views({ camera: stage.camera, orbit, root: dom.views });
 
@@ -333,7 +383,10 @@
     bindEvents(canvas);
     initStats();
     readQuery();
+    /* tools/probe.html 依赖这里的引用做拾取 / 规模断言 */
+    window.__dbg = { stage, orbit, registry, GG, THREE, picker, labels, views, ui };
     animate();
+    window.__mark && window.__mark('first-frame-done');
   }
 
   /** 语言切换：静态文案、机位按钮、侧栏、标签、导览一起刷新 */
@@ -359,11 +412,21 @@
      事件绑定
      ============================================================ */
   function bindEvents(canvas) {
+    /* 悬停拾取：只记录坐标，实际射线检测在 animate 里每帧做一次；
+       拖拽 / 平移中直接不拾取，转视角不触发高亮 */
     canvas.addEventListener('pointermove', (e) => {
-      if (e.buttons) return;
-      picker.setHover(picker.pickAt(e.clientX, e.clientY));
+      hoverX = e.clientX; hoverY = e.clientY; hoverDirty = true;
     });
+    canvas.addEventListener('pointerdown', (e) => {
+      downX = e.clientX; downY = e.clientY; downMoved = false;
+    });
+    const noteUp = (e) => {
+      if (Math.hypot(e.clientX - downX, e.clientY - downY) > 6) downMoved = true;
+    };
+    canvas.addEventListener('pointerup', noteUp);
+    canvas.addEventListener('pointercancel', noteUp);
     canvas.addEventListener('click', (e) => {
+      if (downMoved) { downMoved = false; return; }   // 拖拽后的抬起不算点击
       const g = picker.pickAt(e.clientX, e.clientY);
       if (g) selectBuilding(g);
       else closeInfo();
@@ -375,6 +438,19 @@
     });
     document.getElementById('info-prev').addEventListener('click', () => navigate(-1));
     document.getElementById('info-next').addEventListener('click', () => navigate(1));
+
+    /* 导览开始 / 退出给一次 toast，状态变化有反馈 */
+    const toggleTour = () => {
+      if (tour.active) {
+        tour.stop();
+        toast(GG.i18n.t('已退出导览', 'Tour exited'));
+      } else {
+        closeInfo();
+        tour.start();
+        toast(GG.i18n.t('导览开始，共 ' + (tour.stops.length || 0) + ' 站',
+          'Tour started, ' + (tour.stops.length || 0) + ' stops'));
+      }
+    };
 
     const sunSlider = document.getElementById('sun');
     sunSlider.addEventListener('input', () => {
@@ -400,6 +476,12 @@
 
     const rotateBtn = document.getElementById('btn-rotate');
     rotateBtn.setAttribute('aria-pressed', 'false');
+    const syncRotateBtn = () => {
+      rotateBtn.classList.toggle('active', orbit.autoRotate);
+      rotateBtn.setAttribute('aria-pressed', String(orbit.autoRotate));
+    };
+    /* 用户一上手（拖拽 / 滚轮）就停下自动旋转，按钮状态同步回来 */
+    GG.onAutoRotateOff = syncRotateBtn;
     rotateBtn.addEventListener('click', (e) => {
       orbit.autoRotate = !orbit.autoRotate;
       e.currentTarget.classList.toggle('active', orbit.autoRotate);
@@ -419,19 +501,22 @@
       closeInfo();
       views.set('overview');
     });
-    document.getElementById('btn-tour').addEventListener('click', () => {
-      if (tour.active) tour.stop();
-      else {
-        closeInfo();
-        tour.start();
-      }
-    });
+    document.getElementById('btn-tour').addEventListener('click', toggleTour);
     document.getElementById('btn-share').addEventListener('click', shareView);
     document.getElementById('btn-shot').addEventListener('click', saveShot);
     document.getElementById('btn-lang').addEventListener('click', () => GG.i18n.toggle());
     document.addEventListener('gg:lang', applyLang);
+    /* ☰：宽屏收起侧栏，窄屏唤出抽屉（body.sb-open） */
     document.getElementById('panel-toggle').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('collapsed');
+      document.body.classList.toggle('sb-open');
+    });
+    /* 点遮罩收起抽屉；从索引里点中一项也顺手收起 */
+    document.getElementById('scrim').addEventListener('click', () => {
+      document.body.classList.remove('sb-open');
+    });
+    document.getElementById('list').addEventListener('click', () => {
+      document.body.classList.remove('sb-open');
     });
 
     // 键位从机位表生成，新增机位不用再改这里
@@ -462,8 +547,7 @@
       }
       if (k === 'Escape') { closeInfo(); return; }
       if (k === 't' || k === 'T') {
-        if (tour.active) tour.stop();
-        else { closeInfo(); tour.start(); }
+        toggleTour();
         return;
       }
       if (k === ' ') {
@@ -475,9 +559,16 @@
       }
     });
 
+    /* 窗口 resize 防抖：连续拖动边缘只做一次重建；
+       拉宽到桌面宽度时清掉抽屉状态，遮罩不残留 */
+    let resizeTimer = null;
     window.addEventListener('resize', () => {
-      stage.resize();
-      labels.invalidate();
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        stage.resize();
+        labels.invalidate();
+        if (window.innerWidth > 1080) document.body.classList.remove('sb-open');
+      }, 120);
     });
   }
 
@@ -526,6 +617,32 @@
     if (q.get('play') === '1') setDayPlay(true);
   }
 
+  /* 动态分辨率结算：每秒一次，掉帧先降档、稳定两窗再升档 */
+  function updateDrs(dt) {
+    if (STILL) return;
+    drs.acc += dt;
+    drs.frames++;
+    if (drs.acc < 1) return;
+    const fps = drs.frames / drs.acc;
+    drs.acc = 0;
+    drs.frames = 0;
+    const n = DRS.scales.length;
+    if (fps < DRS.downFps && drs.i < n - 1) {
+      drs.i++;
+      drs.good = 0;
+      stage.setResolutionScale(DRS.scales[drs.i]);
+    } else if (fps >= DRS.upFps && drs.i > 0) {
+      drs.good++;
+      if (drs.good >= DRS.needGood) {
+        drs.i--;
+        drs.good = 0;
+        stage.setResolutionScale(DRS.scales[drs.i]);
+      }
+    } else {
+      drs.good = 0;
+    }
+  }
+
   /* ============================================================
      主循环
      ============================================================ */
@@ -543,7 +660,16 @@
       stage.skyDome.position.copy(stage.camera.position);
     }
 
+    /* 阴影锚点跟随注视点：太阳不动 + 锚点不动 = 零阴影开销 */
+    stage.setShadowAnchor(orbit.target.x, orbit.target.y, orbit.target.z);
+    stage.updateShadowFit();
+
     picker.update(dt);
+    /* 悬停拾取每帧至多一次；拖拽 / 平移中跳过 */
+    if (hoverDirty && !orbit.dragging && !orbit.panning) {
+      hoverDirty = false;
+      picker.setHover(picker.pickAt(hoverX, hoverY));
+    }
     updateCompass();
     /* 粒子的下落由 dt 驱动；STILL 时 dt 传 0，位置仍跟随相机 */
     if (GG.weather) GG.weather.tick(STILL ? 0 : dt, stage.camera);
@@ -553,6 +679,7 @@
 
     stage.render();
     updateStats(dt);
+    updateDrs(dt);
   }
 
   if (document.readyState === 'loading') {

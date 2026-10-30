@@ -303,7 +303,9 @@ canvas#scene {
   box-shadow: 0 0 8px var(--gold);
 }
 
-/* ---------------- 视角控制 ---------------- */
+/* ---------------- 视角控制：统一机位条 ----------------
+   九个机位收进一条分段控件（一个容器描边，替代九块独立描边），
+   单元格统一 min-width，换行后仍成列，不再参差。 */
 #views {
   position: fixed;
   top: 26px;
@@ -311,36 +313,45 @@ canvas#scene {
   z-index: 40;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
   justify-content: flex-end;
-  max-width: 340px;
+  gap: 2px;
+  padding: 4px;
+  max-width: min(700px, calc(100vw - 60px));
+  background: linear-gradient(150deg, rgba(16, 12, 8, 0.7), rgba(16, 12, 8, 0.48));
+  border: 1px solid var(--gold-line);
+  border-radius: 3px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-#views button, #time button, .tool {
+#views button {
+  flex: 0 0 auto;
+  min-width: 58px;
+  padding: 7px 8px;
   font-family: inherit;
   font-size: 11.5px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  text-align: center;
   color: var(--paper-dim);
-  background: rgba(18, 14, 10, 0.66);
-  border: 1px solid var(--gold-line);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 2px;
-  padding: 7px 12px;
   cursor: pointer;
-  transition: all 0.2s;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  transition: color 0.18s, background 0.18s;
 }
-#views button:hover, #time button:hover, .tool:hover {
+#views button:hover {
   color: var(--gold);
-  border-color: var(--gold-dim);
-  background: rgba(28, 22, 17, 0.85);
+  background: rgba(217, 182, 97, 0.1);
 }
-#views button.active, #time button.active, .tool.active {
+#views .active {
   color: var(--ink);
   background: var(--gold);
-  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(217, 182, 97, 0.32);
 }
 
-/* ---------------- 底部工具 ---------------- */
+/* ---------------- 底部工具：统一工具条 ----------------
+   与机位条同一套语言：一个容器 + 扁平分段，分组用细分隔线。 */
 #tools {
   position: fixed;
   bottom: 26px;
@@ -349,21 +360,51 @@ canvas#scene {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  row-gap: 6px;
-  gap: 8px;
+  row-gap: 2px;
+  gap: 2px;
+  padding: 4px;
   max-width: calc(100vw - 60px);
+  background: linear-gradient(150deg, rgba(16, 12, 8, 0.7), rgba(16, 12, 8, 0.48));
+  border: 1px solid var(--gold-line);
+  border-radius: 3px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 #tools .sep {
   width: 1px;
   height: 18px;
   background: var(--gold-line);
-  margin: 0 4px;
+  margin: 0 5px;
+}
+.tool, #time button {
+  font-family: inherit;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  color: var(--paper-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: color 0.18s, background 0.18s;
+}
+.tool:hover, #time button:hover {
+  color: var(--gold);
+  background: rgba(217, 182, 97, 0.1);
+}
+.tool.active, #time button.active {
+  color: var(--ink);
+  background: var(--gold);
+}
+.tool:active, #views button:active, #time button:active {
+  transform: translateY(0.5px);
 }
 #time {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 0 4px;
+  padding: 0 6px;
 }
 #time .tlabel {
   font-size: 9.5px;
@@ -950,15 +991,52 @@ body.hide-ui #stats { display: none; }
 
 body.hide-labels #labels { display: none; }
 
+/* ---------------- 侧栏抽屉遮罩（仅窄屏由 JS 显示） ---------------- */
+#scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: rgba(8, 6, 4, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 统计面板帧率色阶 */
+#stats .st-ok { color: #9fd08a; }
+#stats .st-warn { color: #e8c15a; }
+#stats .st-bad { color: #e06a50; }
+
 /* ---------------- 响应式 ---------------- */
 @media (max-width: 1080px) {
-  #sidebar { display: none; }
+  /* 窄屏侧栏改为覆盖抽屉：默认收起，☰ 唤出，点遮罩关闭 */
+  #sidebar {
+    top: 0;
+    left: 0;
+    bottom: 0;
+    max-height: 100vh;
+    width: min(260px, 82vw);
+    padding: calc(18px + env(safe-area-inset-top)) 4px 18px 16px;
+    background: linear-gradient(180deg, rgba(16, 12, 8, 0.985), rgba(12, 9, 6, 0.985));
+    border-right: 1px solid var(--gold-line);
+    box-shadow: 18px 0 48px rgba(0, 0, 0, 0.45);
+    transform: translateX(calc(-100% - 20px));
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 40;
+  }
+  body.sb-open #sidebar { transform: translateX(0); }
+  #sidebar.collapsed { transform: translateX(calc(-100% - 20px)); }
+  body.sb-open #scrim {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
   #brand h1 { font-size: 21px; }
-  #views { max-width: 260px; }
+  #views { max-width: calc(100vw - 40px); }
   #info { width: 280px; right: 16px; padding: 22px 20px; }
 }
 @media (max-width: 720px) {
-  #brand { top: 16px; left: 16px; }
+  #brand { top: 16px; left: 16px; padding-top: env(safe-area-inset-top); }
   #brand h1 { font-size: 18px; letter-spacing: 0.16em; }
   #brand .sub { font-size: 9px; }
   #views {
@@ -969,9 +1047,9 @@ body.hide-labels #labels { display: none; }
     max-width: none;
     justify-content: center;
   }
-  #views button { padding: 6px 9px; font-size: 10.5px; letter-spacing: 0.06em; }
+  #views button { min-width: 52px; padding: 6px 8px; font-size: 10.5px; letter-spacing: 0.06em; }
   #tools {
-    bottom: 16px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
     left: 12px;
     right: 12px;
     justify-content: center;
@@ -995,14 +1073,12 @@ body.hide-labels #labels { display: none; }
     border-right: none;
     max-height: 52vh;
     overflow-y: auto;
-    padding: 20px 22px 26px;
+    padding: 20px 22px calc(26px + env(safe-area-inset-bottom));
   }
   #info.open { transform: translateY(0); }
   #info-name { font-size: 22px; }
   #info-desc { font-size: 12px; line-height: 1.9; }
-  #panel-toggle { display: none; }
-
-  /* 导览时收起周边控件，只留字幕条与退出 */
+  /* ☰ 保留为抽屉开关：窄屏下索引改走覆盖抽屉，不再隐藏按钮 */
   #tour {
     left: 0;
     right: 0;

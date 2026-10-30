@@ -609,6 +609,249 @@
       name: '内务府', en: 'Imperial Household Department', cat: '西路', year: '清初',
       form: '院落式衙署',
       desc: '总管皇室财政与宫禁事务的机构。宫中吃穿用度、营造修缮、祭祀赏赉无不由其经办，下辖七司三院，是清代宫廷日常运转的中枢。'
+    },
+
+    /* ---------------- 京师 · 城门与坛庙 ---------------- */
+    zhengyangmen: {
+      py: 'zhengyangmen', pyi: 'zym',
+      rel: ['yongdingmen', 'tiananmen'],
+      name: '正阳门', en: 'Zhengyang Gate', cat: '城防',
+      year: '明永乐十七年（1419）／明正统四年（1439）增建箭楼与瓮城',
+      form: '城楼重檐歇山顶，前有箭楼、瓮城，城台开五门',
+      scale: '城台宽约九十五米（示意）',
+      status: '城楼与箭楼为北京中轴线遗产点',
+      desc: '内城正南门，俗称前门。明永乐年间建，初名丽正门，正统年间增筑箭楼与瓮城，形成城楼、箭楼、瓮城三重防御。明清皇帝赴天坛祭祀多由此出。'
+    },
+    yongdingmen: {
+      py: 'yongdingmen', pyi: 'ydm',
+      rel: ['zhengyangmen', 'tiantan'],
+      name: '永定门', en: 'Yongding Gate', cat: '城防',
+      year: '明嘉靖三十二年（1553）／二〇〇四年复建',
+      form: '城台开三门，上建重檐歇山顶城楼，前设瓮城',
+      status: '二〇〇四年按原制复建，今为南中轴起点',
+      desc: '外城正南门，嘉靖年间修筑外城时建，取“永远安定”之意。城楼重檐歇山，前设瓮城，是北京外城七门中规制最高的一座。一九五七年拆除。'
+    },
+    dianmen: {
+      py: 'dianmen', pyi: 'dam',
+      rel: ['tiananmen', 'shouhuangdian'],
+      name: '地安门', en: 'Gate of Earthly Peace', cat: '城防',
+      year: '明永乐十八年（1420）',
+      form: '城台开三门，上建单檐歇山顶门楼',
+      status: '一九五四年拆除，场景为示意复原',
+      desc: '皇城北门，俗称后门，与天安门南北相对。清代帝后赴地坛祭祀、皇帝北巡多由此出。门外即地安门大街，直通钟鼓楼。'
+    },
+    donganmen: {
+      py: 'donganmen', pyi: 'dam',
+      rel: ['tiananmen'],
+      name: '东安门', en: 'Gate of Eastern Peace', cat: '城防',
+      year: '明永乐年间',
+      form: '城台开三门，上建门楼',
+      status: '一九一二年焚毁，场景为示意复原',
+      desc: '皇城东门，位于东长安街北侧。门内为皇城东苑，门外为东安门大街。清末民初屡遭火焚，遗址今仅存地名。'
+    },
+    xianmen: {
+      py: 'xianmen', pyi: 'xam',
+      rel: ['tiananmen', 'beihai'],
+      name: '西安门', en: 'Gate of Western Peace', cat: '城防',
+      year: '明永乐年间',
+      form: '城台开三门，上建门楼',
+      status: '一九五〇年代拆除，场景为示意复原',
+      desc: '皇城西门，与东安门东西相对。门外为西安门大街，门内可通西苑三海，是皇城西侧的重要孔道。'
+    },
+    chongwenmen: {
+      py: 'chongwenmen', pyi: 'cwm',
+      rel: ['zhengyangmen', 'chaoyangmen'],
+      name: '崇文门', en: 'Chongwen Gate', cat: '城防',
+      year: '明正统四年（1439）',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九六〇年代拆除，明城墙遗址公园存残段',
+      desc: '内城南墙东侧门，俗称哈德门。明清两代设税关于此，进京货物在此纳税，是京师最重要的税门，也是运河漕运入城的门户。'
+    },
+    xuanwumen: {
+      py: 'xuanwumen', pyi: 'xwm',
+      rel: ['zhengyangmen', 'fuchengmen'],
+      name: '宣武门', en: 'Xuanwu Gate', cat: '城防',
+      year: '明正统四年（1439）',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九六五年拆除，场景为示意复原',
+      desc: '内城南墙西侧门，俗称顺治门。门外为宣武门外大街，清代士人、会馆多聚于此，与崇文门的商贾之气形成对照。'
+    },
+    chaoyangmen: {
+      py: 'chaoyangmen', pyi: 'cym',
+      rel: ['dongzhimen', 'chongwenmen'],
+      name: '朝阳门', en: 'Chaoyang Gate', cat: '城防',
+      year: '元至元年间／明正统四年（1439）改今名',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九五六年拆除，场景为示意复原',
+      desc: '内城东墙北侧门，元称齐化门。京通漕粮自通州经此入城，门内旧有禄米仓、南新仓，是京师粮运的总入口。'
+    },
+    fuchengmen: {
+      py: 'fuchengmen', pyi: 'fcm',
+      rel: ['xizhimen', 'xuanwumen'],
+      name: '阜成门', en: 'Fucheng Gate', cat: '城防',
+      year: '元至元年间／明正统四年（1439）改今名',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九五〇年代拆除，场景为示意复原',
+      desc: '内城西墙北侧门，元称平则门。京西门头沟的煤炭由此入城，城内煤栈云集，故俗称煤门。'
+    },
+    dongzhimen: {
+      py: 'dongzhimen', pyi: 'dzm',
+      rel: ['chaoyangmen', 'andingmen'],
+      name: '东直门', en: 'Dongzhi Gate', cat: '城防',
+      year: '元至元年间／明正统四年（1439）改今名',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九六〇年代拆除，场景为示意复原',
+      desc: '内城东北门，元称崇仁门。南方木材经运河、通惠河由此入城，门内多木厂、砖厂，是京师营造材料的集散地。'
+    },
+    xizhimen: {
+      py: 'xizhimen', pyi: 'xzm',
+      rel: ['fuchengmen', 'deshengmen'],
+      name: '西直门', en: 'Xizhi Gate', cat: '城防',
+      year: '元至元年间／明正统四年（1439）改今名',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九六九年拆除，场景为示意复原',
+      desc: '内城西北门，元称和义门。玉泉山水经此入城，明清皇帝赴西苑、圆明园也多出此门，是西郊水利与御路的交点。'
+    },
+    andingmen: {
+      py: 'andingmen', pyi: 'adm',
+      rel: ['deshengmen', 'dianmen'],
+      name: '安定门', en: 'Anding Gate', cat: '城防',
+      year: '明洪武元年（1368）／正统四年（1439）改今名',
+      form: '城台开五门，上建重檐歇山顶城楼',
+      status: '一九六九年拆除，场景为示意复原',
+      desc: '内城北墙东侧门，由元安贞门改建。门外即地坛，明清皇帝祭地由此出。与西侧的德胜门一文一武，分主祭祀与兵事。'
+    },
+    deshengmen: {
+      py: 'deshengmen', pyi: 'dsm',
+      rel: ['andingmen'],
+      name: '德胜门', en: 'Desheng Gate', cat: '城防',
+      year: '明洪武元年（1368）／正统四年（1439）改今名',
+      form: '城台开五门，上建城楼，前有箭楼',
+      status: '仅存箭楼，其余一九六九年拆除',
+      desc: '内城北墙西侧门，由元健德门改建。明清出兵多走德胜门，取“得胜”之意。今仅存箭楼，是北京内城城门中保存下来的孤例之一。'
+    },
+    zuoanmen: {
+      py: 'zuoanmen', pyi: 'zam',
+      rel: ['yongdingmen'],
+      name: '左安门', en: 'Zuoan Gate', cat: '城防',
+      year: '明嘉靖三十二年（1553）',
+      form: '城台开一门，上建单檐歇山顶城楼',
+      status: '一九五〇年代拆除，场景为示意复原',
+      desc: '外城南墙东侧门，俗称江擦门。门外为左安门外大街，是外城东南的交通孔道，规制低于永定门。'
+    },
+    youanmen: {
+      py: 'youanmen', pyi: 'yam',
+      rel: ['yongdingmen'],
+      name: '右安门', en: 'Youan Gate', cat: '城防',
+      year: '明嘉靖三十二年（1553）',
+      form: '城台开一门，上建单檐歇山顶城楼',
+      status: '一九五〇年代拆除，场景为示意复原',
+      desc: '外城南墙西侧门，俗称南西门。门外为右安门外大街，与左安门东西对称，同为外城南墙的偏门。'
+    },
+    guangqumen: {
+      py: 'guangqumen', pyi: 'gqm',
+      rel: ['chongwenmen'],
+      name: '广渠门', en: 'Guangqu Gate', cat: '城防',
+      year: '明嘉靖三十二年（1553）',
+      form: '城台开一门，上建单檐歇山顶城楼',
+      status: '一九三〇年代拆除，场景为示意复原',
+      desc: '外城东墙门，俗称沙窝门。门外为广渠门外大街，是外城东部通往通州的要道。'
+    },
+    guanganmen: {
+      py: 'guanganmen', pyi: 'gam',
+      rel: ['xuanwumen'],
+      name: '广安门', en: 'Guangan Gate', cat: '城防',
+      year: '明嘉靖三十二年（1553）／清道光年间改今名',
+      form: '城台开一门，上建单檐歇山顶城楼',
+      status: '一九五〇年代拆除，场景为示意复原',
+      desc: '外城西墙门，初名广宁门，清代避道光帝讳改称广安。为西南各省进京的陆路要道，门外旧有彰义门大街。'
+    },
+    tiantan: {
+      py: 'tiantan', pyi: 'tt',
+      rel: ['yongdingmen', 'xiannongtan', 'qiniandian', 'huanqiu', 'huangqiongyu'],
+      name: '天坛', en: 'Temple of Heaven', cat: '宫外',
+      year: '明永乐十八年（1420）始建／清乾隆十九年（1754）定型',
+      form: '内外两重坛墙，北圆南方；祈谷坛与圜丘坛南北对峙，中以丹陛桥相连',
+      scale: '坛域约二百七十三公顷，祈年殿通高三十八点二米',
+      status: '一九九八年列入世界文化遗产',
+      desc: '明清两代祭天、祈谷之所。乾隆十四年至十九年（1749—1754）相继改建：圜丘改为三层艾叶青石坛，皇穹宇改为单檐圆殿，祈年殿三色瓦统一为蓝琉璃。坛域北圆南方，象天法地，柏林占其十九。'
+    },
+    qiniandian: {
+      py: 'qiniandian', pyi: 'qnd',
+      rel: ['tiantan', 'huanqiu', 'huangqiongyu'],
+      name: '祈年殿', en: 'Hall of Prayer for Good Harvests', cat: '宫外',
+      year: '明永乐十八年（1420）始建大祀殿／清光绪二十二年（1896）重建',
+      form: '三重檐圆形攒尖顶，蓝琉璃瓦，鎏金宝顶；下承三层汉白玉圆台',
+      scale: '殿高38.2米、底径32.7米；台基径91米、高5.6米',
+      status: '现存殿身为光绪重建，形制同乾隆',
+      desc: '祈谷坛正殿。二十八根楠木柱环列：四根龙井柱象四季，十二金柱象十二月，十二檐柱象十二时辰。乾隆十六年（1751）改三色瓦为一色蓝琉璃，定名祈年殿；光绪十五年遭雷火，二十二年按原制重建。'
+    },
+    huanqiu: {
+      py: 'huanqiu', pyi: 'hq',
+      rel: ['tiantan', 'huangqiongyu', 'qiniandian'],
+      name: '圜丘', en: 'Circular Mound Altar', cat: '宫外',
+      year: '明嘉靖九年（1530）始建／清乾隆十四年（1749）改建',
+      form: '三层圆形石坛，四面出陛各九级，内外两重壝墙',
+      scale: '通高5.17米，上层径23.65米、下层径54.92米',
+      status: '现存形制为乾隆改建后原物',
+      desc: '冬至祭天之所。坛面以天心石为心，铺扇面石九圈，每圈九的倍数；栏板三百六十块应周天数。乾隆十四年改蓝琉璃为艾叶青石，加汉白玉栏板望柱。四面棂星门共八组二十四座。'
+    },
+    huangqiongyu: {
+      py: 'huangqiongyu', pyi: 'hqy',
+      rel: ['huanqiu', 'tiantan'],
+      name: '皇穹宇', en: 'Imperial Vault of Heaven', cat: '宫外',
+      year: '明嘉靖九年（1530）始建／清乾隆十七年（1752）改建',
+      form: '单檐蓝琉璃攒尖圆殿，外环圆形围墙，南设三座琉璃门',
+      scale: '殿高19.5米、径15.6米；回音壁直径61.5米、高3.72米',
+      status: '一九九八年随天坛列入世界文化遗产',
+      desc: '圜丘坛的天库，平日供奉祭天神牌。乾隆十七年由重檐改为单檐。外围圆墙以磨砖对缝砌筑，声波沿内壁传递，俗称回音壁；殿前御路第三块石板为三音石。'
+    },
+    zhaigong: {
+      py: 'zhaigong', pyi: 'zg',
+      rel: ['tiantan', 'huangqiongyu'],
+      name: '天坛斋宫', en: 'Palace of Abstinence (Temple of Heaven)', cat: '宫外',
+      year: '明永乐十八年（1420）',
+      form: '两重宫墙、两道御沟环护；无梁殿、寝殿、钟楼皆覆绿琉璃',
+      scale: '占地约四公顷（示意）',
+      status: '现存建筑经清代重修',
+      desc: '皇帝祭天前斋戒三日的宫室。正殿以砖拱承重、不用梁枋，称无梁殿；绿琉璃瓦示天子居所，不敢用祭天的蓝瓦。祀前不茹荤、不饮酒、不入内寝，以示敬诚。'
+    },
+    xiannongtan: {
+      py: 'xiannongtan', pyi: 'xnt',
+      rel: ['tiantan'],
+      name: '先农坛', en: 'Altar of Agriculture', cat: '宫外',
+      year: '明永乐十八年（1420）',
+      form: '太岁殿、观耕台与耤田组成，绿琉璃瓦歇山顶',
+      status: '现为北京古代建筑博物馆',
+      desc: '明清两代祭祀先农、行耤田礼之所。每年仲春，皇帝在此亲耕三推，以示重农。坛内太岁殿、观耕台与一亩三分地至今可辨。'
+    },
+    jingshan: {
+      py: 'jingshan', pyi: 'js',
+      rel: ['shenwumen', 'shouhuangdian', 'beihai'],
+      name: '景山', en: 'Jingshan (Coal Hill)', cat: '宫外',
+      year: '明永乐年间堆土成山／清顺治十二年（1655）改称景山',
+      form: '五峰并列，中峰最高，山巅建万春亭，四峰各建一亭',
+      scale: '山高约四十五米（示意），为旧城中轴制高点',
+      status: '一九二八年辟为公园',
+      desc: '明代称万岁山，俗称煤山，相传为营建紫禁城时掘护城河之土堆成。五峰东西排列，中峰万春亭是全城的制高点，清代帝后在此登高、观射。明崇祯十七年（1644），李自成军入城，崇祯帝自缢于山东麓。'
+    },
+    beihai: {
+      py: 'beihai', pyi: 'bh',
+      rel: ['zhongnanhai', 'shouhuangdian'],
+      name: '北海', en: 'Beihai Park', cat: '宫外',
+      year: '辽金始辟／清顺治八年（1651）建白塔',
+      form: '琼华岛居中，藏式覆钵白塔立于山巅，沿岸环以殿宇',
+      status: '一九二五年辟为公园',
+      desc: '辽金元明清五代御苑，以琼华岛白塔为标志。白塔为藏式覆钵塔，清顺治年间建，是皇城西苑保存最完整的一处。'
+    },
+    zhongnanhai: {
+      py: 'zhongnanhai', pyi: 'znh',
+      rel: ['beihai', 'tiananmen'],
+      name: '中南海', en: 'Central and South Lakes', cat: '宫外',
+      year: '辽金始辟／明清为皇城西苑',
+      form: '中海、南海两湖相连，沿岸布殿宇与岛屿',
+      status: '现为机关所在地，不对外开放',
+      desc: '中海与南海的合称，与北海一脉相连，同属皇城西苑。清代沿岸增建殿宇，民国时为总统府所在。今不对外开放，场景为示意复原。'
     }
   };
 })();

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>probe</title>
+<style>
+  body { margin: 0; font: 13px/1.5 ui-monospace, Menlo, monospace; background: #111; color: #ddd; }
+  iframe { width: 1280px; height: 800px; border: 0; opacity: 0.02; position: absolute; left: 0; top: 0; }
+  pre { position: relative; z-index: 2; padding: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<iframe id="f" src="../index.html?nofade=1&seed=1&still=1&view=capital"></iframe>
+<pre id="out">running…</pre>
+<script>
+/* 探针：把主页面装进同源 iframe，等 __dbg 就绪后跑断言。
+   结果写进 #out，配合 Chrome --dump-dom 读取。
+   用法：Chrome --headless --dump-dom "http://127.0.0.1:PORT/tools/probe.html?case=pick"
+   q= 可把查询串透传给 iframe，例如 q=pos%3D1%2C2%3C3%26tgt%3D... */
+const q = new URLSearchParams(location.search);
+const CASE = q.get('case') || 'pick';
+const out = document.getElementById('out');
+const f = document.getElementById('f');
+if (q.get('q')) f.src = '../index.html?nofade=1&seed=1&still=1&' + q.get('q');
+const lines = [];
+function log(s) { lines.push(String(s)); out.textContent = lines.join('\n'); }
+
+function waitReady() {
+  return new Promise((resolve, reject) => {
+    const t0 = Date.now();
+    (function poll() {
+      const w = f.contentWindow;
+      if (w && w.__dbg && w.__dbg.picker && w.__dbg.registry && w.__dbg.registry.length) return resolve(w);
+      if (Date.now() - t0 > 60000) return reject(new Error('timeout waiting __dbg'));
+      setTimeout(poll, 200);
+    })();
+  });
+}
+
+/* 把世界坐标投到屏幕，再用页面自己的 picker 反查 —— 与真实点击同一条路径 */
+function pickAtWorld(w, x, y, z) {
+  const THREE = w.THREE;
+  const cam = w.__dbg.stage.camera;
+  const canvas = w.document.getElementById('scene');
+  const v = new THREE.Vector3(x, y, z).project(cam);
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+  const cy = rect.top + (-v.y * 0.5 + 0.5) * rect.height;
+  return { hit: w.__dbg.picker.pickAt(cx, cy), cx, cy, behind: v.z > 1 };
+}
+
+const CASES = {
+  /* 当前机位：核对 ?pos/?tgt 是否被启动流程改写 */
+  async cam(w) {
+    const c = w.__dbg.stage.camera;
+    const o = w.__dbg.orbit;
+    log('cam=' + c.position.toArray().map((n) => n.toFixed(1)).join(','));
+    log('tgt=' + o.target.toArray().map((n) => n.toFixed(1)).join(','));
+    log('fov=' + c.fov + ' aspect=' + c.aspect.toFixed(3));
+    log('radius=' + o.radius.toFixed(1));
+  },
+
+  /* 逐个地标做近距离投影 + 拾取：从远处打射线会被前景挡住，
+     这里把相机搬到每个建筑斜上方 3 倍半径处，单独验证"点得到" */
+  async pick(w) {
+    const THREE = w.THREE;
+    const cam = w.__dbg.stage.camera;
+    const list = w.__dbg.registry;
+    log('registry=' + list.length);
+    const rows = [];
+    const v = new THREE.Vector3();
+    for (const g of list) {
+      const info = g.userData.info || {};
+      if (!info.name) continue;
+      g.getWorldPosition(v);
+      const r = Math.max(70, (g.userData.pickRadius || 30) * 3.2);
+      const ly = g.userData.labelY || 20;
+      cam.position.set(v.x + r * 0.45, v.y + r * 0.55 + ly, v.z + r * 0.75);
+      cam.lookAt(v.x, v.y + ly * 0.35, v.z);
+      cam.updateMatrixWorld(true);
+      const hit = pickAtWorld(w, v.x, v.y + ly * 0.3, v.z);
+      rows.push({
+        name: info.name,
+        got: hit.hit ? ((hit.hit.userData.info || {}).name || '?') : '—',
+        ok: hit.hit === g,
+        x: Math.round(v.x), z: Math.round(v.z)
+      });
+    }
+    const bad = rows.filter((r) => !r.ok);
+    log('total=' + rows.length + ' ok=' + (rows.length - bad.length) + ' miss=' + bad.length);
+    for (const r of bad) log('  MISS ' + r.name + ' @' + r.x + ',' + r.z + ' → ' + r.got);
+    const names = rows.map((r) => r.name);
+    log('names: ' + names.join(' '));
+  },
+
+
+  /* 水面材质自检：确认加载的是新版着色器、uniform 有被 setSun 写入 */
+  async water(w) {
+    const m = w.GG.build.MAT.water;
+    log('material=' + (m && m.type));
+    log('has uSkyTop=' + (m.uniforms.uSkyTop ? 'yes' : 'no') +
+        ' has uNight=' + (m.uniforms.uNight ? 'yes' : 'no'));
+    const f = m.fragmentShader || '';
+    log('shader has skyRefl=' + (f.indexOf('skyRefl') >= 0) +
+        ' has spark=' + (f.indexOf('spark') >= 0));
+    const u = m.uniforms;
+    log('deep=' + u.uDeepColor.value.getHexString() +
+        ' skyTop=' + u.uSkyTop.value.getHexString() +
+        ' skyBot=' + u.uSkyBottom.value.getHexString() +
+        ' night=' + u.uNight.value.toFixed(3));
+    log('shoreMat=' + (w.GG.water.createShore() && w.GG.water.createShore().type));
+    let lakes = 0;
+    w.__dbg.stage.scene.traverse((o) => { if (o.isMesh && o.material === m) lakes++; });
+    log('waterMeshes=' + lakes);
+  },
+
+
+  /* 实例化图层自检：谁在渲染、谁的数量是 0 */
+  async layers(w) {
+    const M = w.GG.build.MAT;
+    const tag = new Map();
+    tag.set(M.brick, 'brick');
+    tag.set(M.tileGray, 'tileGray');
+    tag.set(M.tile, 'tile');
+    tag.set(M.wall, 'wall');
+    const rows = [];
+    w.__dbg.stage.scene.traverse((o) => {
+      if (!o.isInstancedMesh) return;
+      const t = tag.get(o.material) || (o.material && o.material.type) || '?';
+      const bb = o.geometry.boundingBox || (o.geometry.computeBoundingBox(), o.geometry.boundingBox);
+      rows.push(t + ' count=' + o.count +
+        ' tri=' + Math.round((o.geometry.attributes.position.count / 3) * o.count) +
+        ' y=' + (bb ? bb.min.y.toFixed(1) + '..' + bb.max.y.toFixed(1) : '?') +
+        ' vis=' + o.visible);
+    });
+    rows.sort();
+    for (const r of rows) log(r);
+    log('brick=' + !!M.brick + ' tileGray=' + !!M.tileGray);
+    const info = w.__dbg.stage.renderer.info;
+    log('calls=' + info.render.calls + ' tris=' + info.render.triangles);
+  },
+
+
+  /* 帧率采样：连续跑 3 秒 rAF，报平均与最差 10% */
+  async fps(w) {
+    const N = 180;
+    const dt = [];
+    let last = performance.now();
+    for (let i = 0; i < N; i++) {
+      await new Promise((r) => w.requestAnimationFrame(r));
+      const now = performance.now();
+      dt.push(now - last);
+      last = now;
+    }
+    dt.sort((a, b) => a - b);
+    const avg = dt.reduce((a, b) => a + b, 0) / dt.length;
+    log('frames=' + dt.length);
+    log('avg=' + avg.toFixed(2) + 'ms  fps=' + (1000 / avg).toFixed(1));
+    log('p50=' + dt[Math.floor(dt.length * 0.5)].toFixed(2) +
+        '  p90=' + dt[Math.floor(dt.length * 0.9)].toFixed(2) +
+        '  max=' + dt[dt.length - 1].toFixed(2));
+    const info = w.__dbg.stage.renderer.info;
+    log('calls=' + info.render.calls + ' tris=' + info.render.triangles);
+    log('gpu=' + (w.__dbg.GG.debug.gpu || '?'));
+  },
+
+
+  /* 四合院与连排的规模：文档里的数字从这里取 */
+  async city(w) {
+    const st = w.GG.city.stats;
+    log(JSON.stringify(st));
+  },
+
+
+  /* 单座建筑拆解：列出子网格的材质与包围盒，查"重檐少了一层"这类问题 */
+  async hall(w) {
+    const THREE = w.THREE;
+    const name = q.get('name') || '太和殿';
+    const g = w.__dbg.registry.find((x) => (x.userData.info || {}).name === name);
+    if (!g) { log('not found: ' + name); return; }
+    const M = w.GG.build.MAT;
+    const tag = new Map();
+    for (const k of Object.keys(M)) tag.set(M[k], k);
+    const box = new THREE.Box3();
+    const rows = [];
+    g.traverse((o) => {
+      if (!o.isMesh) return;
+      box.setFromObject(o);
+      rows.push([
+        tag.get(o.material) || (o.material && o.material.type) || '?',
+        box.min.y.toFixed(1), box.max.y.toFixed(1),
+        box.min.x.toFixed(0), box.max.x.toFixed(0)
+      ].join('  '));
+    });
+    log('meshes=' + rows.length);
+    rows.sort();
+    for (const r of rows) log(r);
+  },
+
+  /* 天坛区域的大体量网格：核对台基 / 殿身的实际尺寸 */
+  async region(w) {
+    const THREE = w.THREE;
+    const box = new THREE.Box3();
+    const rows = [];
+    w.__dbg.stage.scene.traverse((o) => {
+      if (!o.isMesh || o.isInstancedMesh) return;
+      box.setFromObject(o);
+      if (!isFinite(box.min.y) || box.isEmpty()) return;
+      const cx = (box.min.x + box.max.x) / 2;
+      const cz = (box.min.z + box.max.z) / 2;
+      if (cx < 1400 || cx > 3300 || cz < 2200 || cz > 4100) return;
+      const sx = box.max.x - box.min.x, sy = box.max.y - box.min.y, sz = box.max.z - box.min.z;
+      if (sx < 15 && sz < 15) return;
+      rows.push({
+        sx: +sx.toFixed(1), sy: +sy.toFixed(1), sz: +sz.toFixed(1),
+        y: +box.min.y.toFixed(1) + '..' + +box.max.y.toFixed(1),
+        x: Math.round(cx), z: Math.round(cz)
+      });
+    });
+    rows.sort((a, b) => (b.sx * b.sz) - (a.sx * a.sz));
+    log('large meshes=' + rows.length);
+    for (const r of rows.slice(0, 24)) {
+      log(`${r.sx} x ${r.sz}  h=${r.sy}  y=${r.y}  @${r.x},${r.z}`);
+    }
+    log('trees cyp=' + w.GG.city.treeSpots.cyp.length + ' pine=' + w.GG.city.treeSpots.pine.length);
+    log('tiantan=' + JSON.stringify(w.GG.tiantan.stats));
+  },
+
+  /* 统计实例化与绘制规模 */
+  async stats(w) {
+    const info = w.__dbg.stage.renderer.info;
+    let meshes = 0, inst = 0, instCount = 0, tris = 0;
+    w.__dbg.stage.scene.traverse((o) => {
+      if (o.isInstancedMesh) { inst++; instCount += o.count; }
+      else if (o.isMesh) meshes++;
+      if (o.geometry && o.geometry.attributes.position) {
+        const n = o.geometry.attributes.position.count;
+        tris += o.isInstancedMesh ? (n / 3) * o.count : n / 3;
+      }
+    });
+    log('meshes=' + meshes + ' instanced=' + inst + ' instCount=' + instCount);
+    log('tris≈' + Math.round(tris) + ' calls=' + info.render.calls);
+    log('geo=' + info.memory.geometries + ' tex=' + info.memory.textures);
+  },
+
+  /* 列出场景里所有 Group 的包围盒，找"悬空 / 穿地"的对象 */
+  async bounds(w) {
+    const THREE = w.THREE;
+    const box = new THREE.Box3();
+    const rows = [];
+    w.__dbg.registry.forEach((g) => {
+      box.setFromObject(g);
+      if (!isFinite(box.min.y)) return;
+      rows.push([(g.userData.info || {}).name || '?', +box.min.y.toFixed(2), +box.max.y.toFixed(2)]);
+    });
+    rows.sort((a, b) => a[1] - b[1]);
+    for (const r of rows.slice(0, 20)) log(r.join('  y='));
+  }
+};
+
+(async () => {
+  let w = null;
+  try {
+    w = await waitReady();
+    /* 让首帧跑完，矩阵与合并都到位 */
+    await new Promise((r) => setTimeout(r, 1200));
+    if (w.__dbg.stage.scene) w.__dbg.stage.scene.updateMatrixWorld(true);
+    await CASES[CASE](w);
+  } catch (e) {
+    log('ERROR ' + (e && e.message));
+  } finally {
+    /* 关键：把 iframe 的 rAF 掐掉。
+       --virtual-time-budget 只有在页面空闲时才推进虚拟时钟，而主循环
+       每帧吃掉 16 ms 虚拟时间；场景变重后一帧要几十毫秒，预算迟迟
+       用不完，--dump-dom 就一直不返回。停掉循环，时钟立刻走完。 */
+    try {
+      if (w) w.requestAnimationFrame = function () { return 0; };
+    } catch (e) { /* 跨域不该发生，兜住 */ }
+    log('__PROBE_DONE__');
+  }
+})();
+</script>
+</body>
+</html>

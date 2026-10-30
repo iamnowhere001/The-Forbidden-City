@@ -13,8 +13,8 @@
     if (GG._overlayInstalled) return;
     GG._overlayInstalled = true;
 
-    window.addEventListener('error', function (e) {
-      GG.errors.push((e.message || '') + '  @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno);
+    function show(msg) {
+      GG.errors.push(msg);
       let d = document.getElementById('__err');
       if (!d) {
         d = document.createElement('div');
@@ -23,7 +23,18 @@
         (document.body || document.documentElement).appendChild(d);
       }
       d.textContent = GG.errors.join('\n');
+    }
+
+    window.addEventListener('error', function (e) {
+      show((e.message || '') + '  @ ' + String(e.filename || '').split('/').pop() + ':' + e.lineno);
     }, true);
+
+    /* 布局是 async 管线，抛在 await 里的异常不会触发 window.onerror，
+       只会变成 unhandledrejection —— 不接这一层，页面会安静地停在加载层。 */
+    window.addEventListener('unhandledrejection', function (e) {
+      const r = e.reason;
+      show('unhandledrejection: ' + ((r && (r.stack || r.message)) || r));
+    });
   };
 
   GG.installErrorOverlay();
@@ -36,7 +47,15 @@
      只在调试参数下生效，正常运行不受影响。 */
   if (GG.query.get('seed') === '1') {
     let s = 20261018;
+    window.__rng = 0;
+    window.__marks = [];
+    window.__mark = function (l) { window.__marks.push([l, window.__rng]); };
+    window.__cap = false; window.__stacks = [];
     Math.random = function () {
+      window.__rng++;
+      if (window.__cap && window.__stacks.length < 3) {
+        window.__stacks.push(new Error().stack.split('\n').slice(1, 5).join(' | '));
+      }
       s = (s * 1664525 + 1013904223) >>> 0;
       return s / 4294967296;
     };

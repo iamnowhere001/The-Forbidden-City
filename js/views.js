@@ -101,16 +101,21 @@
     this._mark(key);
   };
 
-  /** 二次贝塞尔抬升 + 三次缓动 */
+  /** 带弧线飞行切换机位。
+      时长与弧高都随航距缩放：近距离仍是干脆的 1.2s 级，
+      跨院的长航线（如六宫东西 300 米直飞）给到 2.5s 级与更高的弧，
+      不再"甩"过去。focusBuilding / 导览传的 dur 只作下限基准。 */
   Views.prototype.flyTo = function (pos, target, dur) {
     const V3 = THREE.Vector3;
     const p0 = this.camera.position.clone();
     const p1 = new V3(pos[0], pos[1], pos[2]);
+    const dist = p0.distanceTo(p1);
     const mid = p0.clone().lerp(p1, 0.5);
-    mid.y += Math.min(p0.distanceTo(p1) * 0.22, 210);
+    mid.y += Math.min(dist * 0.22, 340);
+    const durMs = Math.min(2900, Math.max((dur || 1.5) * 1000 * 0.85, 850 + dist * 5.5));
     this._fly = {
       start: performance.now(),
-      dur: (dur || 1.5) * 1000,
+      dur: durMs,
       p0, p1, mid,
       t0: this.orbit.target.clone(),
       t1: new V3(target[0], target[1], target[2])

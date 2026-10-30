@@ -20,6 +20,9 @@
 
     this._ringTarget = 0;
     this._ringScale = 1;
+    this.selected = null;
+    this._selRingTarget = 0;
+    this._selRingScale = 1;
 
     const R = GG.CONFIG.ring;
     this.ring = new THREE.Mesh(
@@ -30,7 +33,37 @@
       })
     );
     this.ring.rotation.x = -Math.PI / 2;
+    this.ring.renderOrder = 3;
     this.scene.add(this.ring);
+
+    /* 选中态光圈：悬停离开后仍留在选中建筑脚下，缓慢呼吸。
+       比悬停光圈大一圈、低一线，两个光圈叠成同心环 */
+    this.selRing = new THREE.Mesh(
+      new THREE.RingGeometry(R.inner * 0.88, R.outer * 1.07, 72),
+      new THREE.MeshBasicMaterial({
+        color: R.color, transparent: true, opacity: 0,
+        side: THREE.DoubleSide, depthWrite: false
+      })
+    );
+    this.selRing.rotation.x = -Math.PI / 2;
+    this.selRing.renderOrder = 2;
+    this.scene.add(this.selRing);
+  }
+
+  /** 选中 / 取消选中：光圈常驻，直到关闭信息卡或改选别处 */
+  Picker.prototype.setSelected = function (entry) {
+    if (this.selected === entry) return;
+    this.selected = entry;
+    if (entry) {
+      const v = new V3();
+      entry.getWorldPosition(v);
+      const r = entry.userData.pickRadius || 30;
+      this.selRing.position.set(v.x, 0.55, v.z);
+      this._selRingScale = r * GG.CONFIG.ring.radiusFactor * 1.28;
+      this._selRingTarget = 0.5;
+    } else {
+      this._selRingTarget = 0;
+    }
   }
 
   Picker.prototype.pickAt = function (clientX, clientY) {
@@ -40,9 +73,16 @@
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hits = this.raycaster.intersectObjects(this.registry, true);
     for (const h of hits) {
-      let o = h.object;
-      while (o && !o.userData.isBuilding) o = o.parent;
-      if (o) return o;
+      /* 取"最外层的建筑祖先"，不是第一个 isBuilding：
+         城门楼的正楼是 createHall 造的子 Group，它自己带 isBuilding，
+         若在这里停下，点午门会选中里面的正楼 —— 高亮光圈跑到半空、
+         标签对不上、聚焦机位也偏。拾取永远返回注册进 REG 的那一层。 */
+      let o = h.object, outer = null;
+      while (o) {
+        if (o.userData.isBuilding) outer = o;
+        o = o.parent;
+      }
+      if (outer) return outer;
     }
     return null;
   };
@@ -106,7 +146,7 @@
     }
   };
 
-  /** 光圈呼吸动画，每帧调用 */
+  /** 光圈动画，每帧调用：悬停圈旋转，选中圈呼吸 */
   Picker.prototype.update = function (dt) {
     const ring = this.ring;
     ring.material.opacity += (this._ringTarget * 0.55 - ring.material.opacity) * 0.14;
@@ -114,6 +154,10 @@
     if (ring.material.opacity > 0.01) {
       ring.rotation.z += dt * 0.35;
     }
+    const sel = this.selRing;
+    const pulse = this._selRingTarget * (0.72 + 0.28 * Math.sin(performance.now() * 0.0021));
+    sel.material.opacity += (pulse - sel.material.opacity) * 0.12;
+    sel.scale.setScalar(sel.scale.x + (this._selRingScale - sel.scale.x) * 0.12);
   };
 
   GG.Picker = Picker;

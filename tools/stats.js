@@ -29,9 +29,22 @@ const infoKeys = Object.keys(INFO);
 
 /* ---------- 2. 挂载 ---------- */
 const palaceSrc = read('js/palace.js');
+const citySrc = read('js/city.js');
+const tiantanSrc = read('js/tiantan.js');
 const usedKeys = new Set(
   [...palaceSrc.matchAll(/INFO\.([A-Za-z0-9_]+)/g)].map((m) => m[1])
 );
+/* 京师（城门 / 坛庙 / 三海）的词条是字符串键：城门写在 NC_GATES 之类的
+   表里，地标由 mark(group, 'key') 挂载。不扫这两处会把 22 条误报成未挂载。
+   天坛在 js/tiantan.js 里用 marks.push(group, 'key', ...) 暂存，一并计入。 */
+for (const re of [/key:\s*'([A-Za-z0-9_]+)'/g, /mark\([^,]+,\s*'([A-Za-z0-9_]+)'/g]) {
+  for (const m of citySrc.matchAll(re)) {
+    if (m[1] in INFO) usedKeys.add(m[1]);
+  }
+}
+for (const m of tiantanSrc.matchAll(/marks\.push\([^,]+,\s*'([A-Za-z0-9_]+)'/g)) {
+  if (m[1] in INFO) usedKeys.add(m[1]);
+}
 const unmounted = infoKeys.filter((k) => !usedKeys.has(k));
 const dangling = [...usedKeys].filter((k) => !(k in INFO));
 

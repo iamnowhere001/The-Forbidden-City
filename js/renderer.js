@@ -25,6 +25,11 @@
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
+    /* 阴影按需重绘：阴影视锥与太阳方向都不随相机变化，静止观察时
+       每帧重渲一遍全场景投影是纯浪费。autoUpdate 关掉后，只有
+       setSun（太阳移动）/ setShadowAnchor（锚点移动）时置 needsUpdate。 */
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
     /* 阴影模式按运行环境选：
        软渲染（SwiftShader / llvmpipe）下 PCFSoftShadowMap 不出影，
        截图回归会得到"没有阴影"的假基线，所以自动退回硬边 PCF。
@@ -42,15 +47,20 @@
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(C.fog.color, C.fog.density);
 
-    /* 程序化环境贴图：昼 / 夜两套，日落后切换。
-       PMREM 只在初始化时烘两次；切换只是换 texture，不重编译材质。 */
+    /* 程序化环境贴图：晨 / 午 / 暮 / 夜四档，按 dayT 切换。
+       原来只有昼 / 夜两档，入夜瞬间反射整体跳变；加档后黄昏与黎明
+       的材质反射跟上天空（v2.2 取舍项的收尾）。
+       注意：每次 PMREM 烘焙会消耗 4 次 Math.random（THREE 的 uuid）。
+       昼 / 夜两张在构造器里烘，调用次数与 v2.3 一致，保证 ?seed=1
+       的随机流在布局期逐位不变（树与散布的位置才不漂移）；
+       晨 / 暮两张在布局完成后由 bakeDawnEnvs 补烘（此后无随机依赖）。 */
     function makeEnv(top, bot, gnd) {
       try {
         const pmrem = new THREE.PMREMGenerator(renderer);
         pmrem.compileEquirectangularShader();
         const es = new THREE.Scene();
         es.add(new THREE.Mesh(
-          new THREE.SphereGeometry(100, 24, 16),
+          new THREE.SphereGeometry(100, 48, 28),
           new THREE.ShaderMaterial({
             uniforms: {
               top: { value: new THREE.Color(top) },
@@ -67,10 +77,29 @@
         return tex;
       } catch (e) { return null; }
     }
+    const _ct = new THREE.Color();
     const envDay = makeEnv(col.envSky.top, col.envSky.bottom, col.envSky.ground);
     const envNight = makeEnv(0x0d1524, 0x18202f, 0x07090d);
+    /* 晨 / 暮初始先指回昼档；bakeDawnEnvs 后替换为各自的暖 / 冷色 */
+    const ENV_LIST = [envDay, envDay, envDay, envNight];
     if (envDay) scene.environment = envDay;
-    let envNightOn = false;
+    let envIdx = 1;
+    this.bakeDawnEnvs = function () {
+      if (!envDay) return 0;
+      const morning = makeEnv(
+        _ct.copy(col.skyTopLow).lerp(col.skyTopHigh, 0.12).getHex(),
+        _ct.copy(col.skyBottomLow).lerp(col.skyBottomHigh, 0.14).getHex(),
+        0x5d5a50
+      );
+      const evening = makeEnv(
+        _ct.copy(col.skyTopLow).lerp(col.skyTopHigh, 0.08).getHex(),
+        _ct.copy(col.skyBottomLow).lerp(col.skyBottomHigh, 0.08).getHex(),
+        0x4a4640
+      );
+      if (morning) ENV_LIST[0] = morning;
+      if (evening) ENV_LIST[2] = evening;
+      return (morning ? 1 : 0) + (evening ? 1 : 0);
+    };
 
     const camera = new THREE.PerspectiveCamera(
       C.camera.fov, window.innerWidth / window.innerHeight, C.camera.near, C.camera.far
@@ -101,6 +130,34 @@
     scene.add(sun);
     scene.add(sun.target);
 
+    /* 阴影视锥随视距缩放：8192 的阴影图铺满 ±760 m 时，
+       一个像素约 0.19 m，屋脊与斗拱的投影边缘是糊的。
+       镜头拉近到 60 m 视距时把视锥收到 ±90 m，精度提高八倍，
+       近景的檐下阴影、栏杆投影才立得住；拉远再放开。
+       只在跨过一档时重设投影并重绘阴影，不逐帧抖。 */
+    this._shadowExt = 0;
+    this._shadowDist = C.quality.shadowDistance;
+    this.fitShadowFrustum = (viewDist) => {
+      /* 1.35 倍视距：留出低太阳角下远景高楼的投影落点，
+         视锥收得太紧会把 150 m 外的影子切掉 */
+      const ext = Math.max(SC.minExtent, Math.min(SC.right, viewDist * 1.35));
+      if (this._shadowExt && Math.abs(ext - this._shadowExt) < this._shadowExt * 0.2) return;
+      this._shadowExt = ext;
+      const ratio = SC.top / SC.right;
+      const cam = sun.shadow.camera;
+      cam.left = -ext;
+      cam.right = ext;
+      cam.top = ext * ratio;
+      cam.bottom = -ext * ratio;
+      const sd = Math.max(SC.minDistance, ext * 2.1);
+      this._shadowDist = sd;
+      cam.near = Math.max(12, sd - ext * 2.4);
+      cam.far = sd + ext * 3.4;
+      cam.updateProjectionMatrix();
+      sun.position.copy(this._shadowAnchor).addScaledVector(lightDirV, sd);
+      renderer.shadowMap.needsUpdate = true;
+    };
+
     this.renderer = renderer;
     this.scene = scene;
     this.camera = camera;
@@ -109,6 +166,10 @@
     this.hemi = hemi;
     this.skyMat = sky.material;
     this.skyDome = sky.mesh;
+    /* 阴影锚点（注视点）与动态分辨率状态 */
+    this._shadowAnchor = new V3(0, 4, 10);
+    this._resBase = Math.min(window.devicePixelRatio || 1, C.quality.pixelRatioCap);
+    this._resF = 1;
 
     /* 色彩常量预先建成 Color，避免每帧 new */
     const cSunLow = new THREE.Color(col.sunLow);
@@ -165,13 +226,13 @@
         Math.cos(moonAz) * Math.cos(moonEl)
       ).normalize();
 
-      /* 平行光夜间切到月亮方向，用 night 加权避免日落瞬间跳变 */
+      /* 平行光夜间切到月亮方向，用 night 加权避免日落瞬间跳变。
+         阴影视锥以阴影锚点（注视点）为中心，锚点由主循环 setShadowAnchor
+         维护——同样大的阴影图始终对准当前在看的地方。 */
       lightDirV.copy(sunDirV).lerp(moonDirV, smoothstep(night)).normalize();
-      sun.position.set(
-        lightDirV.x * S.distance[0],
-        lightDirV.y * S.distance[1],
-        lightDirV.z * S.distance[2]
-      );
+      sun.target.position.copy(this._shadowAnchor);
+      sun.position.copy(this._shadowAnchor).addScaledVector(lightDirV, this._shadowDist);
+      renderer.shadowMap.needsUpdate = true;
 
       /* 天候：雪 / 雨 / 秋色的雾、云、日照与天空偏移 */
       const wx = GG.weather ? GG.weather.tint : null;
@@ -218,27 +279,41 @@
       scene.fog.density = C.fog.density * (wx ? wx.fogMul : 1);
       u.haze.value.copy(scene.fog.color).lerp(cHazeWhite, col.hazeAmount * (1 - night));
 
-      /* 水面：太阳方向、日色、天空色与雾色随时刻联动 */
+      /* 水面：太阳方向、日色、天空上下色与雾色随时刻联动 */
       if (GG.water) {
-        GG.water.sync(lightDirV, sun.color, u.bottom.value, scene.fog.color, scene.fog.density);
+        GG.water.sync(
+          lightDirV, sun.color, u.bottom.value, u.top.value,
+          scene.fog.color, scene.fog.density, night
+        );
       }
 
       const dayExp = C.exposure.base + k * C.exposure.sunGain;
       renderer.toneMappingExposure =
         (dayExp * (1 - night) + D.exposure * night) * (GG.debug.exposure || 1);
 
-      /* 环境贴图：入夜与天亮各切一次，避免夜间材质反射白天天空 */
-      const wantNight = night > 0.55;
-      if (envNight && wantNight !== envNightOn) {
-        scene.environment = wantNight ? envNight : envDay;
-        envNightOn = wantNight;
+      /* 环境贴图四档：深夜走 night，晨 / 暮按 dayT 切，白天走 day。
+         （超过一档才换 texture；换 texture 不重编译材质） */
+      let wantEnv = envIdx;
+      if (night > 0.5) wantEnv = 3;
+      else if (dayT < 0.14) wantEnv = 0;
+      else if (dayT > 0.86) wantEnv = 2;
+      else wantEnv = 1;
+      if (wantEnv !== envIdx && ENV_LIST[wantEnv]) {
+        scene.environment = ENV_LIST[wantEnv];
+        envIdx = wantEnv;
       }
 
-      /* 窗纸与宫灯：夜间自发光，白天归零 */
+      /* 窗纸与宫灯：夜间自发光，白天归零。latticeDim 是次要殿宇，
+         亮度压到 55%，整片宫城的窗光因此有了等级（B14） */
       const M = GG.build && GG.build.MAT;
       if (M) {
         if (M.lattice) M.lattice.emissiveIntensity = night * D.windowEmissive;
+        if (M.latticeDim) M.latticeDim.emissiveIntensity = night * D.windowEmissive * 0.55;
         if (M.lantern) M.lantern.emissiveIntensity = night * D.lanternEmissive;
+        /* 宫灯的灯晕：加法混合的点精灵，夜里才浮出来 */
+        if (M.lanternGlow) M.lanternGlow.opacity = night * 0.62;
+        /* 皇城外的万家灯火：只在夜里浮出来，白天全透明 */
+        if (M.cityLamp) M.cityLamp.opacity = night * 0.85;
       }
     };
   }
@@ -251,6 +326,35 @@
     }
     if (GG.water) GG.water.tick(dt);
   };
+
+  /**
+   * 阴影锚点：主循环每帧调用。只有位移超过 shadowAnchorEps 才重定向
+   * 阴影视锥并标记 needsUpdate——原地转动视角不重绘阴影。
+   */
+  Stage.prototype.setShadowAnchor = function (x, y, z) {
+    const eps = GG.CONFIG.quality.shadowAnchorEps;
+    const a = this._shadowAnchor;
+    const dx = x - a.x, dy = y - a.y, dz = z - a.z;
+    if (dx * dx + dy * dy + dz * dz < eps * eps) return;
+    a.set(x, y, z);
+    if (this.sun) this.sun.target.position.copy(a);
+    this.renderer.shadowMap.needsUpdate = true;
+  };
+
+  /** 每帧：按相机到注视点的距离调阴影精度（跨档才生效） */
+  Stage.prototype.updateShadowFit = function () {
+    if (!this.fitShadowFrustum) return;
+    this.fitShadowFrustum(this.camera.position.distanceTo(this._shadowAnchor));
+  };
+
+  /** 动态分辨率：档位切换才重设 drawing buffer */
+  Stage.prototype.setResolutionScale = function (f) {
+    if (this._resF === f) return;
+    this._resF = f;
+    this.renderer.setPixelRatio(this._resBase * f);
+  };
+
+  Stage.prototype.resolutionScale = function () { return this._resF; };
 
   /**
    * 布局完成后统一压低未显式设置的材质的环境反射强度。
@@ -272,6 +376,8 @@
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    /* 窗口尺寸变化后重放当前分辨率倍率（setSize 会按 pixelRatio 重建缓冲） */
+    this.renderer.setPixelRatio(this._resBase * this._resF);
   };
 
   Stage.prototype.render = function () {

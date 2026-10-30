@@ -9,23 +9,36 @@
   GG.CONFIG = {
     /* ---------- 渲染质量（低端机降级时改这里） ---------- */
     quality: {
-      pixelRatioCap: 1.9,
-      shadowMapSize: 4096,
-      shadowCamera: { left: -760, right: 760, top: 820, bottom: -820, near: 120, far: 2400 },
+      pixelRatioCap: 2.0,
+      /* 动态分辨率：帧率低于 downFps 逐级降渲染倍率，稳定在 upFps 以上再逐级升回。
+         软渲染（截图回归）同样生效，只是 SwiftShader 下降档也救不回来，属预期。
+         基准机是 M4，45/57 的阈值定得太保守，轻微抖动就掉档；放到 40/58。 */
+      drs: { scales: [1, 0.92, 0.84], downFps: 40, upFps: 58, needGood: 2 },
+      shadowMapSize: 8192,
+      /* 视锥上界即远景覆盖；实际值按视距在 minExtent…right 之间自适应 */
+      shadowCamera: {
+        left: -760, right: 760, top: 820, bottom: -820,
+        near: 120, far: 2400,
+        minExtent: 150, minDistance: 300
+      },
       shadowBias: -0.0004,
-      shadowNormalBias: 0.05
+      shadowNormalBias: 0.05,
+      /* 阴影锚点：阴影视锥跟随注视点平移，同样大的阴影图覆盖可视区域，
+         远景建筑才有影；偏移超过 anchorEps 米才重定向 */
+      shadowDistance: 760,
+      shadowAnchorEps: 60
     },
 
     camera: {
       fov: 45,
       near: 0.8,
-      far: 8000,
-      start: [0, 1400, 1900]
+      far: 30000,
+      start: [0, 2800, 5000]
     },
 
     fog: {
       color: 0xc3cdd8,
-      density: 0.00026
+      density: 0.000085
     },
 
     /* ---------- 曝光：base + k * gain，k 为太阳高度系数 ---------- */
@@ -58,13 +71,13 @@
       skyBottom: 0x121a2c,
       haze: 0x0f141e,
       ambient: 0x1b2436,
-      ambientI: 0.09,
+      ambientI: 0.11,
       hemiSky: 0x1b2740,
       hemiGround: 0x0b0e13,
-      hemiI: 0.10,
+      hemiI: 0.13,
       moon: 0xd6e2ff,
-      moonI: 0.22,
-      exposure: 0.68,
+      moonI: 0.28,
+      exposure: 0.74,
       /* 窗纸与宫灯：夜间自发光，白天归零 */
       windowGlow: 0xffb35c,
       windowEmissive: 0.85,
@@ -117,15 +130,15 @@
     orbit: {
       target: [0, 10, 40],
       phi: 1.0,
-      radius: 900,
+      radius: 2400,
       damp: 0.12,
       minR: 26,
-      maxR: 1700,
+      maxR: 11000,
       minPhi: 0.08,
       maxPhi: 1.47,
-      panBounds: { x: 460, z: 560, yMin: -10, yMax: 140 },
+      panBounds: { x: 4400, z: 4900, yMin: -10, yMax: 260 },
       /* init 时的临时机位：在飞向全景之前先把镜头放到远处 */
-      boot: { target: [0, 6, 40], radius: 2200, phi: 0.95 }
+      boot: { target: [0, 6, 300], radius: 8200, phi: 0.9 }
     },
 
     /* ---------- 拾取高亮与地面光圈 ---------- */
@@ -135,7 +148,7 @@
     /* ---------- 屋顶形制（米制，参数含义见 geo.js） ---------- */
     roof: {
       curv: 1.55,        // 举折曲率：越大屋面越凹
-      liftRatio: 0.024,  // 翼角起翘 = min(hw, hd) * ratio
+      liftRatio: 0.042,  // 翼角起翘 = min(hw, hd) * ratio（0.024 时几乎看不出翘角）
       hipTopFactor: 0.76 // 庑殿推山：topX = hw - hd * factor
     },
 
@@ -145,7 +158,8 @@
        键位说明：8/9 沿用 v0.9 的约定（东南角是后加的机位，键位排在俯瞰之后），
        与按钮显示顺序不一致，属有意保留。 */
     views: [
-      { id: 'overview', label: '全景', labelEn: 'Overview', name: '全景', key: '1', p: [0, 520, 950], t: [0, 4, 10] },
+      { id: 'capital', label: '京师', labelEn: 'Capital', name: '京师', key: '0', p: [3600, 1500, 5200], t: [0, 0, 400] },
+      { id: 'overview', label: '全景', labelEn: 'Overview', name: '全景', key: '1', p: [0, 1300, 2600], t: [0, 0, 200] },
       { id: 'axis', label: '中轴', labelEn: 'Axis', name: '中轴', key: '2', p: [0, 88, 596], t: [0, 44, 120] },
       { id: 'taihe', label: '广场', labelEn: 'Square', name: '太和殿广场', key: '3', p: [0, 78, 452], t: [0, 18, 150] },
       { id: 'close', label: '太和殿', labelEn: 'Hall', name: '太和殿', key: '4', p: [0, 48, 254], t: [0, 30, 148] },

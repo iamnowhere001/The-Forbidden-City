@@ -14,16 +14,35 @@
   function add(scene, g, cfg) {
     g.position.set(cfg.x || 0, cfg.y || 0, cfg.z || 0);
     if (cfg.ry) g.rotation.y = cfg.ry;
-    if (g.userData.isBuilding) {
+    /* 只把有词条的实体挂进索引：没有名字的亭、廊、值房进 REG 会
+       变成"点得到但打开是空卡"的幽灵条目，也会拖慢射线检测 */
+    if (g.userData.isBuilding && g.userData.info && g.userData.info.name) {
       REG.push(g);
     }
     scene.add(g);
     return g;
   }
 
+  /* 夜窗分级（B14）：主殿窗纸入夜全亮，次要殿宇压暗一成半，
+     远看整片宫城才有等级，不再是同样亮的一片格子 */
+  const MAIN_WIN = new Set([
+    '太和殿', '中和殿', '保和殿', '乾清宫', '坤宁宫',
+    '午门', '太和门', '乾清门', '神武门', '东华门', '西华门'
+  ]);
+
+  /* 和玺彩画：三大殿与中轴门楼。等级差不在颜色，在檐下那条金线 */
+  const HEXI = new Set([
+    '太和殿', '中和殿', '保和殿', '乾清宫', '坤宁宫', '交泰殿',
+    '太和门', '乾清门', '午门', '神武门', '东华门', '西华门'
+  ]);
+
   function hall(scene, cfg) {
     const info = cfg.info || {};
-    const g = GG.build.createHall(Object.assign({}, cfg, { info: info }));
+    const g = GG.build.createHall(Object.assign({}, cfg, {
+      info: info,
+      dimWin: !MAIN_WIN.has(info.name),
+      hexi: HEXI.has(info.name)
+    }));
     return add(scene, g, cfg);
   }
 
@@ -77,7 +96,8 @@
     const main = GG.build.createHall({
       w: W * 0.62, d: D * 0.42, h: 7.6, roofH: 5.4,
       style: 'xieshan', tiers: 1, tierH: 1.6, eave: 2.2,
-      green: cfg.green, info: cfg.info || {}, plaque: (cfg.info && cfg.info.name) || null
+      green: cfg.green, info: cfg.info || {}, plaque: (cfg.info && cfg.info.name) || null,
+      dimWin: true
     });
     main.position.set(0, 0, -D * 0.2);
     group.add(main);
@@ -103,12 +123,10 @@
   /* ---------------- 地面 / 绿化 / 陈设小件 ---------------- */
   // 草坪：宫苑草地，略高于城砖地坪（innerPave 在 0.004）避免共面闪烁
   function lawn(scene, w, d, x, z, y) {
-    const tx = GG.getTextures().grass.clone();
-    tx.needsUpdate = true;
-    tx.repeat.set(Math.max(1, Math.round(w / 7)), Math.max(1, Math.round(d / 7)));
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, d),
-      new THREE.MeshStandardMaterial({ map: tx, color: 0x9ab47c, roughness: 1 })
+      GG.geo.uvScale(new THREE.PlaneGeometry(w, d),
+        Math.max(1, Math.round(w / 7)), Math.max(1, Math.round(d / 7))),
+      GG.build.groundMaterial('grass', 0x748a55)
     );
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, y == null ? 0.014 : y, z);
@@ -119,12 +137,10 @@
 
   // 甬路：园内浅色步道，压在草坪之上
   function path(scene, w, d, x, z, y) {
-    const tx = GG.getTextures().paving.clone();
-    tx.needsUpdate = true;
-    tx.repeat.set(Math.max(1, Math.round(w / 5)), Math.max(1, Math.round(d / 5)));
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, d),
-      new THREE.MeshStandardMaterial({ map: tx, color: 0xb3ad9d, roughness: 0.94 })
+      GG.geo.uvScale(new THREE.PlaneGeometry(w, d),
+        Math.max(1, Math.round(w / 5)), Math.max(1, Math.round(d / 5))),
+      GG.build.groundMaterial('paving', 0xb3ad9d)
     );
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, y == null ? 0.024 : y, z);
@@ -257,14 +273,12 @@
     wallRun(scene, seg, cx + gw / 2 + seg / 2, cz + d / 2, 0, h);
   }
 
-  // 院内地面：比城砖地坪略亮，把院落"铺"出来
+  // 院内地面：比城砖地坪略亮，把院落"铺"出来（材质全局共享，密度写进 UV）
   function yardPave(scene, w, d, x, z, y) {
-    const tx = GG.getTextures().paving.clone();
-    tx.needsUpdate = true;
-    tx.repeat.set(Math.max(1, Math.round(w / 6)), Math.max(1, Math.round(d / 6)));
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(w, d),
-      new THREE.MeshStandardMaterial({ map: tx, color: 0xa29c8e, roughness: 0.96 })
+      GG.geo.uvScale(new THREE.PlaneGeometry(w, d),
+        Math.max(1, Math.round(w / 6)), Math.max(1, Math.round(d / 6))),
+      GG.build.groundMaterial('paving', 0xa29c8e)
     );
     m.rotation.x = -Math.PI / 2;
     m.position.set(x, y == null ? 0.012 : y, z);
@@ -276,38 +290,48 @@
   /* ============================================================
      主入口：布置整个紫禁城
      ============================================================ */
-  GG.layout = function (scene) {
-    const M = GG.build.buildMaterials();
+  /* ============================================================
+     主入口：布置整个紫禁城
+     step(pct, label)：可选的进度回调；各段之间让出主线程一帧，
+     加载条不再假跑，进度反映真实工作量。?seed=1 的随机流不受影响
+     （让出不消耗 Math.random）。
+     ============================================================ */
+  GG.layout = async function (scene, step) {
+    const M = GG.build.buildMaterials();   // 首次调用生成全部程序化贴图
     const t = GG.getTextures();
+    window.__mark && window.__mark('layout-start');
     REG.length = 0;
+    const tick = async (pct) => { if (step) step(pct); await new Promise((r) => setTimeout(r, 16)); };
 
     const HALL = (o) => hall(scene, o);
 
-    /* ---------- 地面 ---------- */
-    const groundMat = new THREE.MeshStandardMaterial({
-      map: t.ground, color: 0x7d8163, roughness: 1
-    });
-    const groundTex = t.ground.clone();
-    groundTex.needsUpdate = true;
-    groundTex.repeat.set(320, 350);
-    groundMat.map = groundTex;
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9800), groundMat);
+    /* ---------- 地面（材质全局共享，平铺密度写进几何 UV） ----------
+       视野扩到京师全城（约 8×7 km）后，地平线必须后退到 15 km 外，
+       否则远山会压在外城城墙上。 */
+    const ground = new THREE.Mesh(
+      GG.geo.uvScale(new THREE.PlaneGeometry(30000, 30000), 1200, 1200),
+      GG.build.groundMaterial('ground', 0x7d8163, 1)
+    );
     ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.15;
+    ground.position.y = -2.2;
     ground.receiveShadow = true;
     scene.add(ground);
+    window.__mark && window.__mark('ground');
 
-    /* ---------- 远山：收束地平线，避免大地平面边缘露白 ---------- */
+    /* ---------- 远山：收束地平线，避免大地平面边缘露白 ----------
+       底半径大、峰高矮，山脊才平缓；原来 420~1040 半径配 80~230 峰高，
+       山形接近半球，远看像一排气球。改成宽底矮峰后是连绵山脊。
+       随机调用次数保持不变，?seed=1 的树 / 散布位置不漂移。 */
     const hills = [];
     for (let i = 0; i < 18; i++) {
       const a = (i / 18) * Math.PI * 2 + Math.random() * 0.2;
-      const rr = 3200 + Math.random() * 1300;
+      const rr = 7500 + Math.random() * 3000;
       const hx = Math.cos(a) * rr;
       const hz = Math.sin(a) * rr * 1.15;
-      const base = 420 + Math.random() * 620;
-      const hh = 80 + Math.random() * 150;
-      const g = new THREE.SphereGeometry(base, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-      g.scale(1, hh / base, 0.72 + Math.random() * 0.5);
+      const base = 1200 + Math.random() * 1000;
+      const hh = 120 + Math.random() * 160;
+      const g = new THREE.SphereGeometry(base, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+      g.scale(1, hh / base, 0.78 + Math.random() * 0.46);
       hills.push(GG.geo.xform(g, { x: hx, y: -8, z: hz, ry: Math.random() * 3 }));
     }
     const hillRing = new THREE.Mesh(
@@ -315,14 +339,12 @@
       new THREE.MeshStandardMaterial({ color: 0x57614d, roughness: 1 })
     );
     scene.add(hillRing);
+    window.__mark && window.__mark('hillRing');
 
     /* 城外地坪：整片灰砖 */
-    const inTex = t.paving.clone();
-    inTex.needsUpdate = true;
-    inTex.repeat.set(66, 84);
     const innerPave = new THREE.Mesh(
-      new THREE.PlaneGeometry(748, 958),
-      new THREE.MeshStandardMaterial({ map: inTex, color: 0x8a8880, roughness: 0.97 })
+      GG.geo.uvScale(new THREE.PlaneGeometry(748, 958), 66, 84),
+      GG.build.groundMaterial('paving', 0x8a8880)
     );
     innerPave.rotation.x = -Math.PI / 2;
     innerPave.position.y = 0.004;
@@ -330,12 +352,9 @@
     scene.add(innerPave);
 
     /* 中轴铺装带 */
-    const paveTex = t.paving.clone();
-    paveTex.needsUpdate = true;
-    paveTex.repeat.set(40, 160);
     const pave = new THREE.Mesh(
-      new THREE.PlaneGeometry(230, 940),
-      new THREE.MeshStandardMaterial({ map: paveTex, color: 0x9a968b, roughness: 0.97 })
+      GG.geo.uvScale(new THREE.PlaneGeometry(230, 940), 40, 160),
+      GG.build.groundMaterial('paving', 0x9a968b)
     );
     pave.rotation.x = -Math.PI / 2;
     pave.position.set(0, 0.02, 0);
@@ -344,12 +363,9 @@
 
     /* 侧路铺装 */
     for (const sx of [-1, 1]) {
-      const st = t.paving.clone();
-      st.needsUpdate = true;
-      st.repeat.set(30, 30);
       const p = new THREE.Mesh(
-        new THREE.PlaneGeometry(280, 640),
-        new THREE.MeshStandardMaterial({ map: st, color: 0x8c887d, roughness: 0.97 })
+        GG.geo.uvScale(new THREE.PlaneGeometry(280, 640), 30, 30),
+        GG.build.groundMaterial('paving', 0x8c887d)
       );
       p.rotation.x = -Math.PI / 2;
       p.position.set(sx * 250, 0.01, -120);
@@ -359,37 +375,131 @@
 
     /* ---------- 三台（三大殿共用的三层须弥座） ---------- */
     const TAI_Z = 65, TAI_L = 236, TAI_W = 122, TAI_H = 8.1;
-    const t3 = GG.geo.terraceGeometry(TAI_W, TAI_L, TAI_H, 3);
+    const STAIR_S_W = 26, STAIR_N_W = 20;
+    const t3 = GG.geo.terraceGeometry(TAI_W, TAI_L, TAI_H, 3, true);
     const taiMesh = new THREE.Mesh(t3.geo, M.stone);
     taiMesh.position.set(0, 0, TAI_Z);
     taiMesh.castShadow = true;
     taiMesh.receiveShadow = true;
     scene.add(taiMesh);
 
-    // 三台栏杆（每层）
+    // 三台栏杆（每层，南 / 北面给大台阶留出上口）
     for (let i = 0; i < 3; i++) {
       const w = TAI_W - i * 2.6 + 0.4;
       const l = TAI_L - i * 2.6 + 0.4;
-      const rail = GG.geo.railingGeometry(w, l, 1.1, 0.85);
+      const rail = GG.geo.railingGeometry(w, l, 1.1, 1.0, { s: STAIR_S_W + 1.2, n: STAIR_N_W + 1.2 });
       const rm = new THREE.Mesh(rail, M.marble);
-      rm.position.set(0, TAI_H * ((i + 1) / 3) - 0.15, TAI_Z);
+      rm.position.set(0, TAI_H * ((i + 1) / 3) - 0.02, TAI_Z);
       rm.castShadow = true;
+      rm.receiveShadow = true;
       scene.add(rm);
     }
     // 三台南面大台阶（御路）
-    const bigStair = GG.geo.stairsGeometry(26, TAI_H, 12, 12, 's');
+    const bigStair = GG.geo.stairsGeometry(STAIR_S_W, TAI_H, 36, 12, 's');
     const bs = new THREE.Mesh(bigStair, M.stone);
     bs.position.set(0, 0, TAI_Z + TAI_L / 2 - 0.4);
     bs.castShadow = true;
     bs.receiveShadow = true;
     scene.add(bs);
     // 北面台阶
-    const bStair = GG.geo.stairsGeometry(20, TAI_H, 12, 9, 's');
+    const bStair = GG.geo.stairsGeometry(STAIR_N_W, TAI_H, 36, 9, 's');
     const bsm = new THREE.Mesh(bStair, M.stone);
     bsm.position.set(0, 0, TAI_Z - TAI_L / 2 + 0.4);
     bsm.rotation.y = Math.PI;
     bsm.castShadow = true;
+    bsm.receiveShadow = true;
     scene.add(bsm);
+
+    /* 台阶两侧的望柱与扶手：栏杆在台阶上口断开以后，如果台阶两侧
+       没有栏板接住，那个缺口就只是一个豁口。 */
+    (function stairRails() {
+      const parts = [];
+      const addRun = (w, depth, zTop, dir) => {
+        const ang = Math.atan2(TAI_H, depth);
+        const slope = Math.hypot(TAI_H, depth);
+        for (const sx of [-1, 1]) {
+          const x = sx * (w / 2 + 0.72);
+          const n = 12;
+          for (let k = 0; k <= n; k++) {
+            const t = k / n;
+            const y = TAI_H * (1 - t);
+            const z = zTop + dir * depth * t;
+            parts.push(GG.geo.box(0.28, 1.0, 0.28, { x, y: y + 0.5, z }));
+            parts.push(GG.geo.box(0.4, 0.12, 0.4, { x, y: y + 1.05, z }));
+            parts.push(GG.geo.box(0.46, 0.16, 0.46, { x, y: y + 0.08, z }));
+          }
+          parts.push(GG.geo.box(0.22, 0.16, slope + 0.4, {
+            x, y: TAI_H / 2 + 0.62, z: zTop + dir * depth / 2,
+            rx: dir > 0 ? ang : -ang
+          }));
+          parts.push(GG.geo.box(0.3, 0.12, slope + 0.4, {
+            x, y: TAI_H / 2 + 0.48, z: zTop + dir * depth / 2,
+            rx: dir > 0 ? ang : -ang
+          }));
+        }
+      };
+      addRun(STAIR_S_W, 12, TAI_Z + TAI_L / 2 - 0.4, 1);
+      addRun(STAIR_N_W, 9, TAI_Z - TAI_L / 2 + 0.4, -1);
+      const m = new THREE.Mesh(GG.geo.merge(parts), M.marble);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      scene.add(m);
+    })();
+
+    /* ---------- 三台螭首 ----------
+       每层须弥座外沿的汉白玉排水龙头，紫禁城三台共有 1142 只。
+       没有它，台基边缘就是一条干净的白线；有了它，台基才有"层层叠起"的分量。 */
+    {
+      const spouts = [];
+      const step = 3.4;
+      for (let i = 0; i < 3; i++) {
+        const w = TAI_W - i * 2.6 + 0.4;
+        const l = TAI_L - i * 2.6 + 0.4;
+        const y = TAI_H * ((i + 1) / 3) - 0.52;
+        const hw = w / 2, hl = l / 2;
+        const nx = Math.max(2, Math.round(w / step));
+        const nz = Math.max(2, Math.round(l / step));
+        const one = (x, z, alongX) => {
+          const out = alongX ? Math.sign(z - TAI_Z) : Math.sign(x);
+          const s = alongX
+            ? GG.geo.box(0.5, 0.36, 1.15, { x: x, y: y, z: z })
+            : GG.geo.box(1.15, 0.36, 0.5, { x: x, y: y, z: z });
+          const hx = alongX ? x : x + out * 0.64;
+          const hz = alongX ? z + out * 0.64 : z;
+          const head = alongX
+            ? GG.geo.box(0.36, 0.32, 0.46, { x: hx, y: y + 0.02, z: hz })
+            : GG.geo.box(0.46, 0.32, 0.36, { x: hx, y: y + 0.02, z: hz });
+          const sx2 = alongX ? x : x + out * 0.84;
+          const sz2 = alongX ? z + out * 0.84 : z;
+          const snout = alongX
+            ? GG.geo.box(0.22, 0.18, 0.3, { x: sx2, y: y - 0.03, z: sz2 })
+            : GG.geo.box(0.3, 0.18, 0.22, { x: sx2, y: y - 0.03, z: sz2 });
+          spouts.push(s, head, snout);
+          // 龙角：两只小翘角，远看是一排带角的兽头
+          for (const k of [-1, 1]) {
+            const ox = alongX ? x + k * 0.13 : hx;
+            const oz = alongX ? hz : z + k * 0.13;
+            spouts.push(GG.geo.xform(new THREE.CylinderGeometry(0.025, 0.06, 0.2, 4), {
+              x: ox, y: y + 0.19, z: oz
+            }));
+          }
+        };
+        for (let k = 0; k <= nx; k++) {
+          const x = -hw + (w * k) / nx;
+          one(x, TAI_Z + hl + 0.22, true);
+          one(x, TAI_Z - hl - 0.22, true);
+        }
+        for (let k = 1; k < nz; k++) {
+          const z = TAI_Z - hl + (l * k) / nz;
+          one(hw + 0.22, z, false);
+          one(-hw - 0.22, z, false);
+        }
+      }
+      const sm = new THREE.Mesh(GG.geo.merge(spouts), M.marble);
+      sm.castShadow = true;
+      sm.receiveShadow = true;
+      scene.add(sm);
+    }
 
     /* ---------- 内金水河 & 金水桥 ---------- */
     const riverPts = [
@@ -420,6 +530,39 @@
     }
 
     // 五座金水桥
+    /* 桥栏：望柱 + 栏板。旧版是两道实心方块，凑近像两块挡板；
+       金水桥的汉白玉栏杆是这片广场唯一能走近看细部的石活。 */
+    const bridgeRail = (bx, bz, bw) => {
+      const len = 17, cz = bz + 1, y0 = 1.8;
+      const posts = [], panels = [];
+      const n = 7;
+      for (const sx of [-1, 1]) {
+        const rx = bx + sx * (bw / 2 - 0.18);
+        for (let i = 0; i <= n; i++) {
+          const rz = cz - len / 2 + (len * i) / n;
+          posts.push(GG.geo.box(0.34, 1.0, 0.34, { x: rx, y: y0 + 0.5, z: rz }));
+          posts.push(GG.geo.box(0.44, 0.08, 0.44, { x: rx, y: y0 + 1.04, z: rz }));
+          posts.push(GG.geo.xform(new THREE.CylinderGeometry(0.13, 0.2, 0.24, 4), {
+            x: rx, y: y0 + 1.2, z: rz, ry: Math.PI / 4
+          }));
+          if (i < n) {
+            const seg = len / n - 0.42;
+            const pz = rz + len / (2 * n);
+            panels.push(GG.geo.box(seg, 0.12, 0.3, { x: rx, y: y0 + 0.06, z: pz }));
+            panels.push(GG.geo.box(seg, 0.58, 0.16, { x: rx, y: y0 + 0.52, z: pz }));
+            panels.push(GG.geo.box(seg, 0.12, 0.3, { x: rx, y: y0 + 0.98, z: pz }));
+          }
+        }
+      }
+      const pm = new THREE.Mesh(GG.geo.merge(posts), M.marble);
+      pm.castShadow = true;
+      pm.receiveShadow = true;
+      scene.add(pm);
+      const sm = new THREE.Mesh(GG.geo.merge(panels), M.marble);
+      sm.castShadow = true;
+      sm.receiveShadow = true;
+      scene.add(sm);
+    };
     const bridgeX = [-72, -36, 0, 36, 72];
     const bridgeW = [7, 9.5, 13, 9.5, 7];
     bridgeX.forEach((bx, i) => {
@@ -430,12 +573,7 @@
       deck.castShadow = true;
       deck.receiveShadow = true;
       scene.add(deck);
-      // 桥栏
-      for (const sx of [-1, 1]) {
-        const r = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.1, 17), M.marble);
-        r.position.set(bx + sx * (bw / 2 - 0.2), 2.2, bz + 1);
-        scene.add(r);
-      }
+      bridgeRail(bx, bz, bw);
     });
 
 
@@ -446,13 +584,128 @@
     function frontCourt() {
       /* ================= 中轴建筑 ================= */
 
-      // 午门
-      const wumen = GG.build.createGateTower({
-        w: 96, d: 46, h: 12.5,
-        mainW: 62, mainD: 24, mainH: 13, roofH: 10,
-        doors: 3, info: INFO.wumen, plaque: '午门'
-      });
-      add(scene, wumen, { x: 0, z: 452 });
+      // 午门：凹字形城台 + 正楼 + 四座阙亭，即"五凤楼"
+      /* 平面是个朝南开口的凹：主体城台横在中轴，两翼向南伸出，
+         正楼压在主体上，四座重檐攒尖阙亭立在两翼两端与根部。
+         之前是普通的矩形门楼，正面看不到那个"凹"，五凤楼就没了。 */
+      (function buildWumen() {
+        const g = new THREE.Group();
+        const H = 12.5;
+        const mainW = 100, mainD = 34;
+        const wingW = 26, wingD = 44;
+        const addBox = (w, d, cx, cz, h, mat) => {
+          const m = new THREE.Mesh(GG.geo.fitUV(new THREE.BoxGeometry(w, h, d), 0.2, h), mat);
+          m.position.set(cx, h / 2, cz);
+          m.castShadow = true;
+          m.receiveShadow = true;
+          g.add(m);
+          /* 须弥座：城台不直接落地，底下压一道汉白玉台基 */
+          const plinth = new THREE.Mesh(
+            GG.geo.fitUV(new THREE.BoxGeometry(w + 1.7, 1.15, d + 1.7), 0.3, 1.15), M.stone
+          );
+          plinth.position.set(cx, 0.575, cz);
+          plinth.castShadow = true;
+          plinth.receiveShadow = true;
+          g.add(plinth);
+          return m;
+        };
+        /* 城台主体 + 两翼 */
+        addBox(mainW, mainD, 0, 0, H, M.wall);
+        for (const sx of [-1, 1]) {
+          addBox(wingW, wingD, sx * (mainW / 2 - wingW / 2), mainD / 2 + wingD / 2, H, M.wall);
+        }
+        /* 城台压顶：石台面 + 黄琉璃瓦走边 + 宇墙 */
+        const capAt = (w, d, cx, cz) => {
+          const slab = new THREE.Mesh(new THREE.BoxGeometry(w + 0.7, 0.42, d + 0.7), M.stone);
+          slab.position.set(cx, H + 0.21, cz);
+          slab.receiveShadow = true;
+          g.add(slab);
+          const rim = [];
+          for (const sz of [-1, 1]) {
+            rim.push(GG.geo.box(w + 0.9, 0.34, 0.62, { x: cx, y: H + 0.58, z: cz + sz * (d / 2 + 0.2) }));
+            rim.push(GG.geo.box(0.62, 0.34, d + 0.9, { x: cx + sz * (w / 2 + 0.2), y: H + 0.58, z: cz }));
+          }
+          const rm = new THREE.Mesh(GG.geo.merge(rim), M.tileCapYellow);
+          rm.castShadow = true;
+          g.add(rm);
+
+          /* 宇墙：城台顶四周的低矮女墙，顶压黄琉璃瓦 */
+          const pw = [];
+          for (const sz of [-1, 1]) {
+            pw.push(GG.geo.box(w, 1.05, 0.4, { x: cx, y: H + 0.95, z: cz + sz * (d / 2 - 0.2) }));
+            pw.push(GG.geo.box(0.4, 1.05, d, { x: cx + sz * (w / 2 - 0.2), y: H + 0.95, z: cz }));
+          }
+          const pm = new THREE.Mesh(GG.geo.merge(pw), M.wall);
+          pm.castShadow = true;
+          g.add(pm);
+          const pc = [];
+          for (const sz of [-1, 1]) {
+            pc.push(GG.geo.box(w + 0.5, 0.24, 0.78, { x: cx, y: H + 1.6, z: cz + sz * (d / 2 - 0.2) }));
+            pc.push(GG.geo.box(0.78, 0.24, d + 0.5, { x: cx + sz * (w / 2 - 0.2), y: H + 1.6, z: cz }));
+          }
+          const pcm = new THREE.Mesh(GG.geo.merge(pc), M.tileCapYellow);
+          pcm.castShadow = true;
+          g.add(pcm);
+        };
+        capAt(mainW, mainD, 0, 0);
+        for (const sx of [-1, 1]) {
+          capAt(wingW, wingD, sx * (mainW / 2 - wingW / 2), mainD / 2 + wingD / 2);
+        }
+
+        /* 门洞：主体南面三间，两翼内侧各一间（明三暗五） */
+        const door = (w, h, x, z, ry) => {
+          const dk = new THREE.Mesh(
+            new THREE.PlaneGeometry(w, h),
+            new THREE.MeshStandardMaterial({ color: 0x1a0f0a, roughness: 1 })
+          );
+          dk.position.set(x, h / 2, z);
+          dk.rotation.y = ry;
+          g.add(dk);
+          const arch = new THREE.Mesh(
+            new THREE.RingGeometry(w * 0.5, w * 0.63, 14, 1, 0, Math.PI), M.stone
+          );
+          arch.position.set(x, h, z);
+          arch.rotation.y = ry;
+          g.add(arch);
+        };
+        const doorH = H * 0.66;
+        for (let i = -1; i <= 1; i++) {
+          const w = i === 0 ? 9.5 : 7.4;
+          door(w, doorH, i * 22, mainD / 2 + 0.06, 0);
+        }
+        for (const sx of [-1, 1]) {
+          door(6.2, doorH * 0.9, sx * (mainW / 2 - wingW) + sx * 0.06,
+            mainD / 2 + wingD * 0.5, sx > 0 ? -Math.PI / 2 : Math.PI / 2);
+        }
+
+        /* 正楼：重檐庑殿，面阔九间 */
+        const main = GG.build.createHall({
+          w: 62, d: 24, h: 13, roofH: 10, style: 'hip', double: true,
+          tiers: 0, stairs: false, eave: 2.9, hexi: true,
+          info: INFO.wumen, plaque: '午门'
+        });
+        main.position.set(0, H + 0.4, -4);
+        g.add(main);
+
+        /* 四座阙亭：重檐攒尖，压在两翼的根部与南端 */
+        for (const sx of [-1, 1]) {
+          for (const cz of [mainD / 2 + 6, mainD / 2 + wingD - 8]) {
+            const p = GG.build.createPavilion({
+              w: 13, h: 5.2, roofH: 4.8, tiers: 2, info: null
+            });
+            p.position.set(sx * (mainW / 2 - wingW / 2), H + 0.4, cz);
+            g.add(p);
+          }
+        }
+
+        g.position.set(0, 0, 430);
+        g.userData.info = INFO.wumen;
+        g.userData.isBuilding = true;
+        g.userData.labelY = H + 26;
+        g.userData.pickRadius = 56;
+        REG.push(g);
+        scene.add(g);
+      })();
 
       // 太和门
       HALL({
@@ -462,34 +715,35 @@
       });
 
       // 太和殿（位于三台之上）
+      /* 面阔十一间 → 檐柱 12 根，柱距 63.96/11 ≈ 5.8 m。
+         走兽十只是全国孤例（其余最高九只），单列。
+         殿身直接坐在三台上，只有一道 0.6 m 的台基；
+         原来那道 2.4 m 的"月台"把殿身埋了 1.4 m，殿看着矮了一截。 */
       const thd = HALL({
-        x: 0, y: TAI_H, z: 140, info: INFO.taihedian, plaque: '太和殿',
-        w: 64, d: 37, h: 15.5, roofH: 12.5, style: 'hip', double: true,
-        tiers: 1, tierH: 1.0, eave: 3.0, colStep: 4.6
+        x: 0, y: TAI_H, z: 140, info: INFO.taihedian, plaque: '建极绥猷',
+        w: 64, d: 37, h: 15.2, roofH: 7.9, style: 'hip', double: true,
+        tiers: 1, tierH: 0.6, railing: false, eave: 3.0, colStep: 5.82,
+        beasts: 10, interior: true, porch: 2.2,
+        /* 太和殿的重檐：下层檐柱高 11 m，腰檐 3.8 m，上层屋身 4.2 m，
+           上檐 7.9 m，加三台 8.1 m 后通高约 35.6 m（实物 35.05 m）。 */
+        lowerH: 11.0, upperH: 4.2, skirtH: 3.8, upperScale: 0.80,
+        upperOnSkirt: true, facade: 'taihe', roofDetail: true, dougongDetail: true
       });
-      // 月台
-      const yt = GG.geo.terraceGeometry(84, 46, 2.4, 1);
-      const ytm = new THREE.Mesh(yt.geo, M.stone);
-      ytm.position.set(0, TAI_H, 148);
-      ytm.castShadow = true;
-      ytm.receiveShadow = true;
-      scene.add(ytm);
-      const ytr = new THREE.Mesh(GG.geo.railingGeometry(84, 46, 1.0, 0.8), M.marble);
-      ytr.position.set(0, TAI_H + 2.4, 148);
-      scene.add(ytr);
 
       // 中和殿
       HALL({
         x: 0, y: TAI_H, z: 62, info: INFO.zhonghedian, plaque: '中和殿',
         w: 26, d: 26, h: 9, roofH: 8.5, style: 'pyramid',
-        tiers: 1, tierH: 2.0, eave: 2.8, railing: true
+        tiers: 1, tierH: 2.0, eave: 2.8, railing: true,
+        facade: 'taihe', bays: 5
       });
 
       // 保和殿
       HALL({
         x: 0, y: TAI_H, z: -14, info: INFO.baohedian, plaque: '保和殿',
         w: 50, d: 26, h: 11, roofH: 11, style: 'xieshan', double: true,
-        tiers: 1, tierH: 2.0, eave: 3.0
+        tiers: 1, tierH: 2.0, eave: 3.0,
+        facade: 'taihe', bays: 9
       });
 
       // 乾清门
@@ -534,12 +788,9 @@
 
       /* ---------- 太和殿广场：御路、品级山、铜陈设 ---------- */
       // 御路（中轴浅色石板带）
-      const axisTex = t.paving.clone();
-      axisTex.needsUpdate = true;
-      axisTex.repeat.set(4, 40);
       const axisRoad = new THREE.Mesh(
-        new THREE.PlaneGeometry(15, 116),
-        new THREE.MeshStandardMaterial({ map: axisTex, color: 0xc4bfae, roughness: 0.94 })
+        GG.geo.uvScale(new THREE.PlaneGeometry(15, 116), 4, 40),
+        GG.build.groundMaterial('paving', 0xc4bfae, 0.94)
       );
       axisRoad.rotation.x = -Math.PI / 2;
       axisRoad.position.set(0, 0.035, 243);
@@ -548,49 +799,89 @@
 
       // 三台大台阶中央的云龙御路
       const yuLu = new THREE.Mesh(
-        new THREE.BoxGeometry(6.6, 0.34, 14.6),
+        GG.geo.uvScale(new THREE.BoxGeometry(6.6, 0.3, 14.7), 3.0, 7.0),
         new THREE.MeshStandardMaterial({
-          map: t.carvedStone, bumpMap: t.carvedStone, bumpScale: 0.55,
-          color: 0xded8c6, roughness: 0.82, metalness: 0.03
+          map: t.carvedStone, bumpMap: t.carvedStone, bumpScale: 0.8,
+          color: 0xc9c1ab, roughness: 0.8, metalness: 0.03
         })
       );
-      yuLu.position.set(0, 4.12, 188.6);
+      yuLu.position.set(0, 4.22, 188.8);
       yuLu.rotation.x = 0.594;
       yuLu.castShadow = true;
       yuLu.receiveShadow = true;
       scene.add(yuLu);
+      // 御路两侧的垂带压边，让斜面和踏步分开
+      for (const sx of [-1, 1]) {
+        const edge = new THREE.Mesh(
+          new THREE.BoxGeometry(0.48, 0.16, 14.7),
+          M.marble
+        );
+        edge.position.set(sx * 3.54, 4.3, 188.8);
+        edge.rotation.x = 0.594;
+        edge.castShadow = true;
+        edge.receiveShadow = true;
+        scene.add(edge);
+      }
 
-      // 品级山：广场东西各九座
-      const pins = [];
+      // 品级山：广场东西各九座。石座 + 三峰山形 + 正面题名石
+      const pins = [], pinPlaques = [];
+      const pinjiShan = (x, z) => {
+        // 石座：下枋、束腰、上枋三步，顶上才是三峰山形
+        pins.push(GG.geo.box(1.4, 0.22, 1.15, { x, y: 0.11, z }));
+        pins.push(GG.geo.box(1.12, 0.18, 0.88, { x, y: 0.31, z }));
+        pins.push(GG.geo.box(1.34, 0.16, 1.1, { x, y: 0.48, z }));
+        for (const [dx, r, h] of [[-0.3, 0.4, 0.5], [0, 0.5, 0.8], [0.3, 0.36, 0.58]]) {
+          pins.push(GG.geo.xform(new THREE.ConeGeometry(r, h, 4), {
+            x: x + dx, y: 0.56 + h / 2, z, ry: Math.PI / 4
+          }));
+        }
+        pinPlaques.push(GG.geo.box(0.44, 0.3, 0.04, { x, y: 0.3, z: z + 0.6 }));
+      };
       for (let i = 0; i < 9; i++) {
         const z = 200 + i * 10.5;
-        for (const sx of [-1, 1]) {
-          pins.push(GG.geo.box(1.15, 1.0, 0.95, { x: sx * 9.5, y: 0.5, z }));
-          pins.push(GG.geo.box(1.35, 0.18, 1.15, { x: sx * 9.5, y: 1.06, z }));
-        }
+        for (const sx of [-1, 1]) pinjiShan(sx * 9.5, z);
       }
       const pinMesh = new THREE.Mesh(GG.geo.merge(pins), M.marble);
       pinMesh.castShadow = true;
       pinMesh.receiveShadow = true;
       scene.add(pinMesh);
+      const pinPlaqueMesh = new THREE.Mesh(GG.geo.merge(pinPlaques), M.darkStone);
+      pinPlaqueMesh.castShadow = true;
+      scene.add(pinPlaqueMesh);
 
-      // 月台上的铜鹤、铜龟、日晷、嘉量
+      // 三台顶面（即太和殿月台）上的陈设
+      /* 殿身现在直接坐在三台上，陈设也落在三台顶面 8.1 m 处。
+         日晷在东、嘉量在西，铜龟铜鹤各一对，前后分列。 */
       const BR = GG.build.createBronzeSet;
-      const Y_TAI = TAI_H + 2.4;
+      const Y_TAI = TAI_H;
       for (const sx of [-1, 1]) {
-        const crane = BR('crane', sx * 16, 158);
+        const turtle = BR('turtle', sx * 15, 176);
+        turtle.position.y = Y_TAI;
+        turtle.rotation.y = sx > 0 ? -0.3 : 0.3;
+        turtle.scale.setScalar(1.25);
+        scene.add(turtle);
+
+        const crane = BR('crane', sx * 15, 165);
         crane.position.y = Y_TAI;
         crane.rotation.y = sx > 0 ? -0.4 : 0.4;
         scene.add(crane);
-        const vat = BR('vat', sx * 9, 158);
-        vat.position.y = Y_TAI;
-        vat.scale.setScalar(0.82);
-        scene.add(vat);
       }
-      for (const [sx, z] of [[1, 150], [-1, 150]]) {
-        const gn = BR('sundial', sx * 27, z);
-        gn.position.y = Y_TAI;
-        scene.add(gn);
+      /* 日晷（东）/ 嘉量（西） */
+      const gn = BR('sundial', 30, 172);
+      gn.position.y = Y_TAI;
+      scene.add(gn);
+      const jl = BR('jialiang', -30, 172);
+      jl.position.y = Y_TAI;
+      scene.add(jl);
+
+      /* 三台上的十八座铜鼎：东西各九，乾隆年间增置 */
+      for (const sx of [-1, 1]) {
+        for (let i = 0; i < 9; i++) {
+          const d = BR('ding', sx * 54, 178 - i * 15);
+          d.position.y = Y_TAI;
+          d.scale.setScalar(0.92);
+          scene.add(d);
+        }
       }
 
       // 广场太平缸
@@ -1118,7 +1409,13 @@
         }
         if (cursor < run.to) spans.push([cursor, run.to]);
         for (const [a, b] of spans) {
-          const w = GG.build.createWall({ length: b - a, h: WALL_H, t: 2.6, crenel: true });
+          /* 紫禁城城墙是平滑红墙 + 黄琉璃瓦双道压顶，没有垛口。
+             垛口是内城 / 外城那种防御性城墙的做法，宫城不设。 */
+          const w = GG.build.createWall({
+            length: b - a, h: WALL_H, t: 2.6, crenel: false,
+            doubleCap: true, capRise: 0.62, capOver: 0.34,
+            capMat: M.tileCapYellow, ridgeMat: M.ridge
+          });
           if (run.axis === 'x') {
             w.position.set((a + b) / 2, 0, run.pos);
           } else {
@@ -1144,44 +1441,95 @@
         scene.add(rp);
       }
 
-      // 角楼
+      // 角楼：三重檐、十字歇山顶，压住城墙转角
+      /* 上一版是三层方形盒子各叠两片悬山，读起来像塔。角楼的辨识点
+         是"下两层为腰檐环抱、顶层十字脊"——下层两道腰檐用截顶的
+         庑殿环，顶层才是两片悬山十字相交。 */
+      const RC = GG.CONFIG.roof;
       for (const sx of [-1, 1]) {
         for (const sz of [-1, 1]) {
           const g = new THREE.Group();
-          // 台座
-          const base = new THREE.Mesh(new THREE.BoxGeometry(17, 3, 17), M.stone);
-          base.position.y = 1.5;
+          /* 台座 */
+          const base = new THREE.Mesh(new THREE.BoxGeometry(19, 2.6, 19), M.stone);
+          base.position.y = 1.3;
           base.castShadow = true;
           base.receiveShadow = true;
           g.add(base);
-          // 三层楼身
-          let y = 3, w = 13, h = 5.0;
-          for (let i = 0; i < 3; i++) {
-            const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), M.wall);
-            body.position.y = y + h / 2;
+
+          const tiers = [
+            { w: 16, h: 4.4, eave: 2.3, skirt: 3.2 },
+            { w: 11.5, h: 3.6, eave: 1.9, skirt: 2.7 },
+            { w: 7.6, h: 3.2 }
+          ];
+          let y = 2.6;
+          for (let i = 0; i < 2; i++) {
+            const t = tiers[i];
+            const body = new THREE.Mesh(new THREE.BoxGeometry(t.w, t.h, t.w), M.wall);
+            body.position.y = y + t.h / 2;
+            body.castShadow = true;
+            body.receiveShadow = true;
             g.add(body);
-            // 十字歇山用两个交叉的两坡顶拼合
-            for (let k = 0; k < 2; k++) {
-              const rg = GG.geo.roofGeometry({
-                hw: w / 2 + 2.2, hd: w / 2 + 2.2, topX: w / 2 + 2.2, topZ: 0,
-                h: 2.6 + (2 - i) * 1.4, curv: GG.CONFIG.roof.curv, lift: 0.75,
-                uSeg: 8, vSeg: 3, withSides: false, sideVMax: 0
-              });
-              const rm = new THREE.Mesh(rg, M.tile);
-              rm.position.y = y + h;
-              rm.rotation.y = k * Math.PI / 2;
-              rm.castShadow = true;
-              g.add(rm);
-            }
-            y += h + 1.0;
-            w *= 0.76;
-            h *= 0.82;
+            /* 周围廊柱：角楼四面通透，柱子比墙更抢眼 */
+            const cm = new THREE.Mesh(GG.geo.columnRing(t.w + 0.6, t.w + 0.6, t.h, 3.1), M.column);
+            cm.position.y = y;
+            cm.castShadow = true;
+            g.add(cm);
+
+            const next = tiers[i + 1];
+            const hw = t.w / 2 + t.eave;
+            const rg = GG.geo.roofGeometry({
+              hw: hw, hd: hw,
+              topX: next.w / 2 - 0.4, topZ: next.w / 2 - 0.4,
+              h: t.skirt, curv: 1.06, lift: hw * 0.055,
+              uSeg: 14, vSeg: 4, withSides: true, sideVMax: 1
+            });
+            const rm = new THREE.Mesh(rg, M.tile);
+            rm.position.y = y + t.h;
+            rm.castShadow = true;
+            rm.receiveShadow = true;
+            g.add(rm);
+            /* 腰檐正脊（围脊） */
+            const rim = new THREE.Mesh(
+              new THREE.BoxGeometry(next.w + 0.6, 0.5, next.w + 0.6), M.ridge
+            );
+            rim.position.y = y + t.h + t.skirt * 0.9;
+            g.add(rim);
+            y += t.h + t.skirt * 0.5;
           }
-          g.position.set(sx * (WALL_X - 14), 0, sz * (WALL_Z - 14));
+
+          /* 顶层屋身 + 十字歇山 */
+          const top = tiers[2];
+          const body3 = new THREE.Mesh(new THREE.BoxGeometry(top.w, top.h, top.w), M.wall);
+          body3.position.y = y + top.h / 2;
+          body3.castShadow = true;
+          g.add(body3);
+          const hw3 = top.w / 2 + 1.9;
+          for (let k = 0; k < 2; k++) {
+            const rg = GG.geo.roofGeometry({
+              hw: hw3, hd: hw3, topX: hw3, topZ: 0,
+              h: 4.3, curv: RC.curv, lift: 0.78,
+              uSeg: 10, vSeg: 5, withSides: false, sideVMax: 0
+            });
+            const rm = new THREE.Mesh(rg, M.tile);
+            rm.position.y = y + top.h;
+            rm.rotation.y = (k * Math.PI) / 2;
+            rm.castShadow = true;
+            rm.receiveShadow = true;
+            g.add(rm);
+          }
+          /* 宝顶 */
+          const finial = new THREE.Mesh(new THREE.SphereGeometry(0.6, 10, 8), M.gold);
+          finial.position.y = y + top.h + 4.3 + 0.5;
+          g.add(finial);
+          const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.5, 6), M.gold);
+          rod.position.y = y + top.h + 4.3 + 1.1;
+          g.add(rod);
+
+          g.position.set(sx * (WALL_X - 4), 0, sz * (WALL_Z - 4));
           g.userData.info = INFO.jiaolou;
           g.userData.isBuilding = true;
-          g.userData.labelY = 22;
-          g.userData.pickRadius = 14;
+          g.userData.labelY = 26;
+          g.userData.pickRadius = 15;
           REG.push(g);
           scene.add(g);
         }
@@ -1259,17 +1607,19 @@
       HILL = { x: 0, z: -880, r: 200, h: 46 };
       const hillGeo = new THREE.SphereGeometry(HILL.r, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2);
       hillGeo.scale(1, HILL.h / HILL.r, 0.72);
-      const hillMat = new THREE.MeshStandardMaterial({
-        map: t.ground, color: 0x6f7452, roughness: 1
-      });
-      const hillTex = t.ground.clone();
-      hillTex.needsUpdate = true;
-      hillTex.repeat.set(26, 18);
-      hillMat.map = hillTex;
-      const hill = new THREE.Mesh(hillGeo, hillMat);
+      const hillMat = GG.build.groundMaterial('ground', 0x6f7452, 1);
+      const hillTexUv = GG.geo.uvScale(hillGeo, 26, 18);
+      const hill = new THREE.Mesh(hillTexUv, hillMat);
       hill.position.set(HILL.x, -0.1, HILL.z);
       hill.receiveShadow = true;
       scene.add(hill);
+      /* 万岁山本身是一个可点地标：山上四亭没有词条，射线打中亭子后
+         会继续往下找，最终落到山体上 */
+      hill.userData.info = INFO.jingshan;
+      hill.userData.isBuilding = true;
+      hill.userData.labelY = HILL.h + 6;
+      hill.userData.pickRadius = HILL.r * 0.95;
+      if (INFO.jingshan) REG.push(hill);
 
       // 山面高度函数（树与亭都贴着坡面落座）
       hillY = (x, z) => {
@@ -1315,18 +1665,14 @@
         side.position.set(sx * 44, 0, SH.z - 8);
         side.rotation.y = Math.PI / 2;
         scene.add(side);
-        REG.push(side);
       }
 
       /* ================= 宫城外 · 南面中轴（端门—天安门—大清门） ================= */
       // 前广场铺装：午门外到天安门（压在护城河外的城砖地上）
       {
-        const tx = t.paving.clone();
-        tx.needsUpdate = true;
-        tx.repeat.set(38, 30);
         const m = new THREE.Mesh(
-          new THREE.PlaneGeometry(360, 280),
-          new THREE.MeshStandardMaterial({ map: tx, color: 0x9c968a, roughness: 0.96 })
+          GG.geo.uvScale(new THREE.PlaneGeometry(360, 280), 38, 30),
+          GG.build.groundMaterial('paving', 0x9c968a, 0.96)
         );
         m.rotation.x = -Math.PI / 2;
         m.position.set(0, 0.01, 688);
@@ -1335,7 +1681,7 @@
       }
       // 千步廊：天安门到大清门之间的长街，两侧连檐通脊的红墙
       for (const sx of [-1, 1]) {
-        wallRun(scene, 150, sx * 118, 725, Math.PI / 2, 6.2);
+        wallRun(scene, 168, sx * 118, 734, Math.PI / 2, 6.2);
       }
       wallRun(scene, 240, 0, 800, 0, 6.2);
       // 大清门（明代大明门，清代大清门）
@@ -1397,7 +1743,6 @@
         side.position.set(sx * 60, 0, 700);
         side.rotation.y = Math.PI / 2;
         scene.add(side);
-        REG.push(side);
       }
       lawn(scene, TM.w - 16, 40, TM.x, 668);
       bed(scene, TM.x - 70, 668, 3.2);
@@ -1459,6 +1804,22 @@
         alt.userData.pickRadius = 30;
         scene.add(alt);
         REG.push(alt);
+      }
+
+      /* ================= 皇城 / 内城 / 外城 =================
+         宫城之外的城市骨架。不消耗 Math.random（内部独立 LCG），
+         所以不会推动 ?seed=1 的既有随机流。
+         第二个参数把城门与坛庙挂进索引：远景也能点开读词条。 */
+      if (GG.city) {
+        GG.city.build(scene, (group, key, labelY, radius) => {
+          const info = INFO[key];
+          if (!group || !info) return;
+          group.userData.info = info;
+          group.userData.isBuilding = true;
+          group.userData.labelY = labelY || group.userData.labelY || 24;
+          group.userData.pickRadius = radius || group.userData.pickRadius || 30;
+          REG.push(group);
+        });
       }
 
     }
@@ -1553,6 +1914,13 @@
       scatter(cypPos, 22, 520, 700, -560, 560, 1.0, 1.5);
       scatter(cypPos, 22, -700, -520, -560, 560, 1.0, 1.5);
 
+      /* 京师（皇城 / 内城 / 外城）的树位由 city.js 预算好，
+         这里并进同一批实例；放在既有 scatter 之后，前序随机流不变。 */
+      if (GG.city && GG.city.treeSpots) {
+        for (const p of GG.city.treeSpots.pine) pinePos.push(p);
+        for (const p of GG.city.treeSpots.cyp) cypPos.push(p);
+      }
+
       const dummy = new THREE.Object3D();
       const _tc = new THREE.Color();
       function inst(geo, mat, list, shadow, tint) {
@@ -1599,12 +1967,36 @@
 
     }
 
-    /* 按原顺序执行：对象创建顺序不变，?seed=1 的随机数流才一致 */
+    /* 按原顺序执行：对象创建顺序不变，?seed=1 的随机数流才一致。
+       段间让出主线程，加载条反映真实进度（让出不消耗随机数）。 */
+    window.__mark && window.__mark('pre-frontCourt');
+    if (step) step(30);
+    await new Promise((r) => setTimeout(r, 16));
     frontCourt();
+    window.__mark && window.__mark('frontCourt');
+
+    if (step) step(52);
+    await new Promise((r) => setTimeout(r, 16));
     palaces();
+    window.__mark && window.__mark('palaces');
+
+    if (step) step(66);
+    await new Promise((r) => setTimeout(r, 16));
     defenses();
+    window.__mark && window.__mark('defenses');
+
+    if (step) step(74);
+    await new Promise((r) => setTimeout(r, 16));
     environs();
+    window.__mark && window.__mark('environs');
+
+    if (step) step(82);
+    await new Promise((r) => setTimeout(r, 16));
     scatterLayer();
+    window.__mark && window.__mark('scatterLayer');
+
+    if (step) step(94);
+    await new Promise((r) => setTimeout(r, 16));
 
     /* ================= 宫灯：夜间点亮的自发光灯笼 =================
        灯体与灯杆各一个 InstancedMesh，16 座合计 2 个 draw call。
@@ -1638,6 +2030,27 @@
     scene.add(poleMesh);
     scene.add(lampMesh);
     GG.build.MAT.lantern = lampMat;
+
+    /* 灯晕：16 个加法混合的点精灵，一个 draw call。
+       只有发光体本身时，夜里是一排小红点；加一圈柔光才像灯笼。 */
+    const glowPos = new Float32Array(lanternSpots.length * 3);
+    lanternSpots.forEach(([x, z], i) => {
+      glowPos[i * 3] = x;
+      glowPos[i * 3 + 1] = 3.75;
+      glowPos[i * 3 + 2] = z;
+    });
+    const glowGeo = new THREE.BufferGeometry();
+    glowGeo.setAttribute('position', new THREE.BufferAttribute(glowPos, 3));
+    const glowMat = new THREE.PointsMaterial({
+      map: t.glow, size: 11, sizeAttenuation: true, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+      color: 0xffb066, opacity: 0
+    });
+    const glow = new THREE.Points(glowGeo, glowMat);
+    glow.frustumCulled = false;
+    glow.renderOrder = 4;
+    scene.add(glow);
+    GG.build.MAT.lanternGlow = glowMat;
 
     return REG;
   };

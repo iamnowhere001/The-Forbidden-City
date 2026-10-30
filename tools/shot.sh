@@ -51,9 +51,11 @@ WATCHDOG="${WATCHDOG:-170}"     # 单张看门狗（秒），Chrome 偶尔不退
 MIN_BYTES="${MIN_BYTES:-100000}"  # 小于此体积视为加载页：22286 字节是加载页的固定大小
 STILL="${STILL:-0}"             # 1 = 冻结相机/云层；与旧基线对比时保持 0
 SEED="${SEED:-1}"               # 1 = 固定随机种子（程序化贴图与树木）
+ANGLE="${ANGLE:-swiftshader}"   # swiftshader（兼容旧基线）| metal（本机 GPU，快十倍以上）
+NOSANDBOX="${NOSANDBOX:-0}"     # 1 = 加 --no-sandbox（WorkBuddy 沙箱里必须）
 
 if [ "${#SPECS[@]}" -eq 0 ]; then
-  for v in overview axis taihe close inner garden shenwu top corner; do
+  for v in capital overview axis taihe close inner garden shenwu top corner; do
     SPECS+=("$v:view=$v")
   done
 fi
@@ -78,6 +80,16 @@ if [ -z "${CHROME:-}" ] || [ ! -x "$CHROME" ]; then
 fi
 echo "Chrome: $CHROME"
 echo "页面根目录: $ROOT"
+
+# ---------- 渲染后端 ----------
+GPU_FLAGS=(--use-angle=swiftshader --enable-unsafe-swiftshader)
+if [ "$ANGLE" = "metal" ]; then
+  GPU_FLAGS=(--use-angle=metal)
+  echo "渲染后端: Metal（不用于跨基线对比）"
+else
+  echo "渲染后端: SwiftShader"
+fi
+[ "$NOSANDBOX" = "1" ] && GPU_FLAGS+=(--no-sandbox)
 
 # ---------- 静态服务器 ----------
 SERVER_PID=""
@@ -141,8 +153,7 @@ if [ "$CHECK" = "1" ]; then
   perl -e 'alarm shift; exec @ARGV' "$WATCHDOG" \
     "$CHROME" \
       --headless=new \
-      --use-angle=swiftshader \
-      --enable-unsafe-swiftshader \
+      "${GPU_FLAGS[@]}" \
       --hide-scrollbars \
       --user-data-dir="/tmp/palace-shot-profile" \
       --window-size="$SIZE" \
@@ -165,7 +176,7 @@ EOF
 fi
 
 # ---------- 逐张截图 ----------
-QEXTRA=""
+QEXTRA="&nofade=1"
 [ "$STILL" = "1" ] && QEXTRA="$QEXTRA&still=1"
 [ "$SEED" = "1" ] && QEXTRA="$QEXTRA&seed=1"
 ok=0
@@ -183,8 +194,7 @@ for spec in "${SPECS[@]}"; do
   perl -e 'alarm shift; exec @ARGV' "$WATCHDOG" \
     "$CHROME" \
       --headless=new \
-      --use-angle=swiftshader \
-      --enable-unsafe-swiftshader \
+      "${GPU_FLAGS[@]}" \
       --hide-scrollbars \
       --force-device-scale-factor=1 \
       --user-data-dir="/tmp/palace-shot-profile" \

@@ -24,6 +24,9 @@
     this.maxR = O.maxR;
     this.minPhi = O.minPhi;
     this.maxPhi = O.maxPhi;
+    /* 拖拽状态对外暴露：app.js 据此在转视角时跳过悬停拾取 */
+    this.dragging = false;
+    this.panning = false;
     this._bind();
     this.update(0);
   }
@@ -49,6 +52,13 @@
         const p = [...pointers.values()];
         pinchDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
         dragging = false; panning = false;
+      }
+      this.dragging = dragging;
+      this.panning = panning;
+      /* 用户一上手就把自动旋转停下来，避免两个运动叠在一起 */
+      if (this.autoRotate) {
+        this.autoRotate = false;
+        if (GG.onAutoRotateOff) GG.onAutoRotateOff();
       }
     };
 
@@ -85,6 +95,7 @@
       pointers.delete(e.pointerId);
       if (pointers.size === 0) {
         dragging = panning = false;
+        this.dragging = this.panning = false;
         el.style.cursor = 'grab';
       }
       pinchDist = 0;
@@ -101,6 +112,11 @@
       const k = Math.exp(e.deltaY * 0.0011);
       this.tRadius *= k;
       this._clamp();
+      /* 滚轮同样视为用户介入：停自动旋转并同步按钮 */
+      if (this.autoRotate) {
+        this.autoRotate = false;
+        if (GG.onAutoRotateOff) GG.onAutoRotateOff();
+      }
       if (GG.onUserInteract) GG.onUserInteract();
     }, { passive: false });
   };

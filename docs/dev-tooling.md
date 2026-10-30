@@ -1,6 +1,6 @@
 # 开发工具与截图回归
 
-> 适用版本：v2.1。只讲“怎么验”，不讲架构与产品。
+> 适用版本：v2.4。只讲“怎么验”，不讲架构与产品。
 > 架构见 [architecture.md](architecture.md)。
 
 ---
@@ -41,10 +41,10 @@ open /tmp/diffmap
 tools/shot.sh [输出目录] [名称:查询串] ...
 ```
 
-不带参数时输出九机位到 `tools/shots/`：
+不带参数时输出十机位到 `tools/shots/`：
 
 ```
-overview axis taihe close inner garden shenwu top corner
+capital overview axis taihe close inner garden shenwu top corner
 ```
 
 自定机位与查询串：
@@ -78,6 +78,19 @@ tools/shot.sh tools/after/autumn "axis:view=axis&weather=autumn"
 
 `shot.sh` 不需要额外参数：页面检测到 SwiftShader 会自动用 `PCFShadowMap`（硬边），否则用 `PCFSoftShadowMap`。若要在真机上复现截图效果，加 `?shadow=hard`。
 
+### 京师视野扩大后（v2.4）
+
+场景从 1.5 km 扩到 8 km，SwiftShader 下一帧要几秒，九机位跑不完。本机切 Metal 后端：
+
+```bash
+ANGLE=metal NOSANDBOX=1 tools/shot.sh tools/after/head "overview:view=overview&still=1"
+```
+
+- `ANGLE=metal` 用 GPU 后端，出图快十倍以上；**不能和 SwiftShader 基线跨后端对比**。
+- `NOSANDBOX=1` 只在 WorkBuddy 沙箱里需要；普通终端可以不加。
+- `capital` 已加入默认机位；`overview` 现在取皇城 + 内城。
+- 截图 URL 会自动带 `nofade=1`，加载层直接隐藏（0.9s CSS 淡出不跟虚拟时间）。
+
 ### 可调环境变量
 
 | 变量 | 默认 | 说明 |
@@ -92,6 +105,8 @@ tools/shot.sh tools/after/autumn "axis:view=axis&weather=autumn"
 | `SEED` | `1` | `1` 时追加 `?seed=1` |
 | `CHECK` | `1` | `1` 时先 `--dump-dom` 预检 JS 错误 |
 | `REUSE` | `0` | `1` 时复用已运行的服务器 |
+| `ANGLE` | `swiftshader` | 渲染后端；`metal` 走本机 GPU |
+| `NOSANDBOX` | `0` | `1` 时给 Chrome 加 `--no-sandbox` |
 
 ### 脚本已经处理的事
 
@@ -214,3 +229,34 @@ node tools/search-check.js
 - `py` / `pyi` 是否补齐、`rel` 引用是否悬空
 
 改 `info.js` 的拼音或 `tour.js` 的站点后必跑。失败会以非零码退出，可以挂进提交前检查。
+
+---
+
+## 八、运行时探针
+
+截图只能证明“画面变了”，证明不了“点得到”。`tools/probe.html` 把主页面装进同源 iframe，
+等 `window.__dbg` 就绪后在**页面内部**跑断言，结果写进 DOM，由 `--dump-dom` 读回：
+
+```bash
+tools/probe.sh pick     # 逐个建筑近距离投影 + 拾取，报告未命中项
+tools/probe.sh layers   # 实例化图层：谁在渲染、数量、包围盒
+tools/probe.sh stats    # mesh / 实例 / 三角形 / draw call 总量
+tools/probe.sh water    # 水面材质自检：新版着色器是否加载、uniform 是否被写入
+tools/probe.sh city     # GG.city.stats：四合院与街巷规模
+```
+
+`pick` 用的是页面自己的 `picker.pickAt`，与真实点击同一条路径；相机被搬到每个建筑
+斜上方 3.2 倍半径处，避免远景射线被前景挡住造成的假阴性。
+
+**为什么不用 headless 的 rAF 测帧率**：虚拟时钟下 `requestAnimationFrame` 与
+`performance.now()` 对不上，采样不出有效数字。帧率只能在真机窗口里用 `?stats=1` 读。
+
+**探针必须在结束时掐掉 iframe 的 rAF**。`--virtual-time-budget` 只在页面空闲时才推进
+虚拟时钟，而主循环每帧吃掉 16 ms 虚拟时间；场景变重之后一帧要几十毫秒，预算迟迟用不完，
+`--dump-dom` 就一直不返回（表现为探针"卡死"、看门狗报警）。`probe.html` 的 `finally`
+里把 `requestAnimationFrame` 换成立即返回的空函数，时钟立刻走完，一次探针从 100 s 降到 3 s。
+
+`window.__dbg` 由 `app.js` 在布局完成后挂出（`stage` / `orbit` / `registry` / `picker` /
+`labels` / `views` / `ui` / `GG` / `THREE`），只在调试时使用，不参与渲染。
+
+---
