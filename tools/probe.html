@@ -50,6 +50,98 @@ function pickAtWorld(w, x, y, z) {
 }
 
 const CASES = {
+  /* v2.4 三块交互的端到端自检：清单 / 朝代对比 / 第一人称 */
+  async v24(w) {
+    const d = w.__dbg;
+    const doc = w.document;
+    let pass = 0, fail = 0;
+    const ck = (name, cond, extra) => {
+      cond ? pass++ : fail++;
+      log((cond ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : ''));
+    };
+
+    /* ---- T7.1 探索清单 ---- */
+    d.quests.open();
+    const groups = doc.querySelectorAll('#quests .q-group');
+    const items = doc.querySelectorAll('#quests .q-item');
+    ck('清单三组', groups.length === 3, 'groups=' + groups.length);
+    ck('清单 27 项', items.length === 27, 'items=' + items.length);
+    ck('面板打开', d.quests.isOpen() && doc.body.classList.contains('quests-on'));
+    const first = doc.querySelector('#quests .q-item');
+    const firstName = w.GG.INFO[first.dataset.key].name;
+    first.click();
+    ck('点条目即已阅', d.ui.hasVisited(firstName), firstName);
+    ck('勾选同步', first.classList.contains('visited'));
+    /* 把中轴十殿点满，完成提示应出现一次 */
+    for (const b of doc.querySelectorAll('#quests .q-group[data-group="axis"] .q-item')) b.click();
+    ck('中轴组标记完成',
+      doc.querySelector('.q-group[data-group="axis"]').classList.contains('complete'));
+    ck('金色完成提示出现', !doc.getElementById('quest-toast').hidden);
+    doc.getElementById('quest-toast-close').click();
+    ck('完成提示可关闭', doc.getElementById('quest-toast').hidden);
+    d.quests.close();
+
+    /* ---- T7.2 朝代对比 ---- */
+    d.eras.open();
+    const eraRows = doc.querySelectorAll('#era .era-item');
+    ck('差异条目数', eraRows.length === w.GG.ERAS.changes.length, 'rows=' + eraRows.length);
+    ck('免责声明可见', doc.getElementById('era-disclaimer').textContent.includes('示意对比'));
+    d.eras.set('ming');
+    ck('切到明代', d.eras.id === 'ming' && doc.getElementById('btn-era').textContent.includes('明'));
+    ck('说明随朝代切换',
+      doc.querySelector('#era .era-item .era-what').textContent.includes('奉天门'));
+    const taihemen = d.registry.find((x) => (x.userData.info || {}).name === '太和门');
+    d.ui.show(taihemen.userData.info);
+    const note = doc.getElementById('info-era');
+    ck('信息卡出现带依据的差异注记', !note.hidden && note.textContent.includes('依据'));
+    d.eras.set('qing');
+    ck('切回清代', doc.querySelector('#era .era-item .era-what').textContent.includes('太和门'));
+    d.eras.close();
+
+    /* ---- T7.3 第一人称 ---- */
+    d.fps.enter({ noLock: true });
+    ck('进入漫游', d.fps.active && doc.body.classList.contains('fps-on'));
+    ck('轨道互斥', d.orbit.enabled === false);
+    ck('人眼高度 1.7m', Math.abs(d.stage.camera.position.y - 1.7) < 0.001);
+    ck('建筑碰撞盒已建', d.fps.boxes.length > 0, 'boxes=' + d.fps.boxes.length);
+    ck('出生点不在碰撞体内', !d.fps.blocked(d.fps.x, d.fps.z));
+    ck('越界被挡', d.fps.blocked(5000, 0));
+    const bx = d.fps.x, bz = d.fps.z;
+    d.fps.keys.add('f');
+    d.fps.update(0.2);
+    d.fps.keys.delete('f');
+    ck('前进有位移', Math.hypot(d.fps.x - bx, d.fps.z - bz) > 0.1);
+    d.fps.pitch = -1.0;
+    d.fps.lookAtPlaque();
+    ck('低头时匾额浮层隐藏', doc.getElementById('fps-plaque').hidden);
+    /* 把视线抬到正前方最近一块匾额的仰角，验证「抬头看匾」 */
+    const fx = -Math.sin(d.fps.yaw), fz = -Math.cos(d.fps.yaw);
+    const rx = Math.cos(d.fps.yaw), rz = -Math.sin(d.fps.yaw);
+    let target = null, td = Infinity;
+    for (const p of d.fps.plaques) {
+      const dx = p.x - d.fps.x, dz = p.z - d.fps.z, dist = Math.hypot(dx, dz);
+      if (dist < 4 || dist > 120) continue;
+      const along = dx * fx + dz * fz;
+      if (along <= 0 || Math.abs(dx * rx + dz * rz) / along > 0.28) continue;
+      if (dist < td) { td = dist; target = p; }
+    }
+    if (target) d.fps.pitch = Math.atan2(target.y - 1.7, td);
+    d.fps.lookAtPlaque();
+    const plaqueName = doc.getElementById('fps-plaque-name').textContent;
+    ck('抬头看匾浮层显示匾额名',
+      !!target && !doc.getElementById('fps-plaque').hidden &&
+      plaqueName === (w.GG.i18n.lang === 'en' ? target.en : target.name),
+      plaqueName + ' / 期望=' + (target ? target.name : '无'));
+    d.fps.exit();
+    ck('退出漫游', !d.fps.active && !doc.body.classList.contains('fps-on'));
+    ck('轨道状态反算合法',
+      d.orbit.enabled === true && d.orbit.radius >= d.orbit.minR &&
+      d.orbit.phi <= d.orbit.maxPhi + 1e-6);
+    ck('退出后相机抬高到合理高度', d.stage.camera.position.y > 1.7);
+    ck('无脚本异常', (w.GG.errors || []).length === 0, (w.GG.errors || []).join(' | '));
+    log('V24 结果：' + pass + ' 通过 / ' + fail + ' 失败');
+  },
+
   /* 当前机位：核对 ?pos/?tgt 是否被启动流程改写 */
   async cam(w) {
     const c = w.__dbg.stage.camera;

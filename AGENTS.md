@@ -1,7 +1,8 @@
 # AGENTS.md
 
 > 面向接手本项目的 AI 编码代理。先读 [README.md](./README.md)、[docs/architecture.md](docs/architecture.md)、[docs/dev-tooling.md](docs/dev-tooling.md)。
-> 本文件只写“是什么、改哪里、怎么验、哪里会炸”。事实以当前 HEAD（`3a9a8e2`，2026-11-03）为准；所有计数先跑脚本，不要手抄旧文档。
+> 本文件只写“是什么、改哪里、怎么验、哪里会炸”。事实以当前工作区为准；所有计数先跑脚本，不要手抄旧文档。
+> 已打的最新 tag 是 `v2.3`；v2.4（M7 三块玩法 + 五轮场景内容收口）已完成代码与回归，**tag 待打**。
 
 ## 一、项目是什么
 
@@ -13,7 +14,7 @@
 | 打开 `index.html` 即运行 | 需要 `npm install` / 构建链的项目 |
 | 原生 JS + 本地 Three.js r149 | TypeScript、ES Module、打包器 |
 
-当前内容量（`node tools/stats.js`，2026-11-03）：98 条词条，97 条挂载到场景实体（`御花园` 为区域词条），77 块匾额（65 显式 + 六宫 12 自动），12099 行 JS。最新 tag 为 `v2.3`；HEAD 已包含 2026-10-19 至 10-21 的五轮未发布内容（京师、三大殿细节、天坛等），见 [CHANGELOG.md](./CHANGELOG.md)。
+当前内容量（`node tools/stats.js`，2026-11-04）：98 条词条，97 条挂载到场景实体（`御花园` 为区域词条），77 块匾额（65 显式 + 六宫 12 自动），13130 行 JS。已打的最新 tag 是 `v2.3`；工作区为 v2.4 内容（京师、三大殿细节、天坛 + M7 探索清单 / 朝代对比 / 第一人称），见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 二、运行与版本
 
@@ -57,6 +58,11 @@ js/tiantan.js            天坛坛域、坛墙、祈谷坛、圜丘、皇穹宇�
 js/city.js               皇城/内城/外城、城门、三海、先农坛、胡同四合院
 js/data/info.js          建筑词条纯数据 GG.INFO
 js/data/tour.js          导览路线纯数据 GG.TOUR
+js/data/quests.js        探索清单纯数据 GG.QUESTS（三组 27 项，只存 info key）
+js/data/eras.js          明清差异纯数据 GG.ERAS（8 处，含年代与依据）
+js/quests.js             清单面板、进度判定、一次性完成提示
+js/eras.js               朝代 tab、差异清单、信息卡注记供稿
+js/fps.js                第一人称：WASD / 碰撞 / 抬头看匾 / 退出反算 orbit
 js/palace.js             总平面布置，内部五段函数；GG.layout 与 GG.REGISTRY
 js/app.js                初始化编排、交互绑定、主循环，自执行
 docs/                    架构、天坛、内容规范、开发工具、无障碍
@@ -72,6 +78,7 @@ head:  debug → config → i18n
 body:  three.min.js → sky → water → weather → orbit → renderer
        → views → labels → picking → ui → tour → textures → geo
        → buildings → tiantan → city → data/info → data/tour
+       → data/quests → data/eras → quests → eras → fps
        → palace → app
 ```
 
@@ -86,7 +93,7 @@ body:  three.min.js → sky → water → weather → orbit → renderer
 })();
 ```
 
-外部调试入口：`GG.CONFIG`、`GG.build.MAT`、`GG.getTextures()`、`GG.geo`、`GG.water`、`GG.city`、`GG.tiantan`、`GG.REGISTRY`；`app.js` 在布局完成后挂 `window.__dbg`（`stage` / `orbit` / `registry` / `picker` / `labels` / `views` / `ui` / `GG` / `THREE`）。`window.__mark` / `window.__cap` 只在 `?seed=1` 下存在，用于定位随机数消耗。
+外部调试入口：`GG.CONFIG`（漫游参数在 `CONFIG.fps`）、`GG.build.MAT`、`GG.getTextures()`、`GG.geo`、`GG.water`、`GG.city`、`GG.tiantan`、`GG.REGISTRY`、`GG.QUESTS`、`GG.ERAS`、`GG.Quests`、`GG.Eras`、`GG.FPS`；`app.js` 在布局完成后挂 `window.__dbg`（`stage` / `orbit` / `registry` / `picker` / `labels` / `views` / `ui` / `quests` / `eras` / `fps` / `GG` / `THREE`）。`window.__mark` / `window.__cap` 只在 `?seed=1` 下存在，用于定位随机数消耗。
 
 ## 五、坐标与内容约定
 
@@ -97,7 +104,9 @@ body:  three.min.js → sky → water → weather → orbit → renderer
 5. **机位只有一份**：`GG.CONFIG.views`。按钮、键盘、`?view=` 全部从它推导，不要在 `app.js` 或 `index.html` 另写一套。
 6. **形制分档**：和玺彩画 `MAT.caihuaHexi` 与 `cfg.hexi`；旋子 `MAT.caihua`。宫墙用 `createWall({ crenel: false, doubleCap: true })`；垛口只给内城/外城防御墙（`crenel: true`）。写反整圈宫墙会变成城墙。
 7. **屋顶只支持四种**：`hip` / `xieshan` / `gable` / `pyramid`。角楼的十字歇山是两个 `roofGeometry` 正交拼合，不是 `style`；盝顶未实现，词条里不要写。
-8. **时间轴**：`t = 0 / 1` 深夜，`0.25` 日出，`0.5` 正午，`0.75` 日落。这是 v2.2 之后的语义，旧基线不可直接比。
+8. **日照时间轴**：`t = 0 / 1` 深夜，`0.25` 日出，`0.5` 正午，`0.75` 日落。这是 v2.2 之后的语义，旧基线不可直接比。**别和朝代对比混淆**：`?era=ming|qing` 只切说明文字，不改几何、不动日照。
+9. **玩法边界**：完成条件是「看到即完成」，判定统一复用 `ui.hasVisited()`，不另存进度、不引入积分 / 排行 / 连续打卡。清单第三组是「五处点景」——日晷、嘉量、铜鼎没有词条，硬做会出现点开是空卡的幽灵条目。
+10. **两套相机互斥**：`FPS.enter()` 置 `orbit.enabled=false` 并取消镜头飞行，主循环只让 `fps.update(dt)` 写相机；`FPS.exit()` 从当前相机反算 `orbit.target / theta / phi / radius`。`Orbit` 的 `move` / `wheel` / `down` 都检查 `enabled`，加新输入路径时别漏。
 
 ## 六、新增建筑构件的挂载位置
 
@@ -201,6 +210,8 @@ bakeDawnEnvs()
 - 优先手段：共享 `MAT`、`GG.geo.merge()`、`InstancedMesh`、把静态块放进 layout 让两遍合并吸收。不要新增逐帧 `new Geometry` / `new Material` / 临时向量。
 - 动态分辨率在 `GG.CONFIG.quality.drs`：低于 40fps 逐级降到 0.92 / 0.84，稳定到 58fps 以上再升回。它只救轻微掉帧，不能掩盖结构性的 draw call 增长。
 - 已知无 LOD：远景始终全精度渲染，远景新增几何会直接计入三角形预算。
+- v2.4 三块玩法都是 DOM / 相机逻辑，不新增场景几何或材质，**默认机位 draw call 应保持不变**。第一人称把相机放到地面，视锥与 `capital` / `overview` 完全不同，那一口径的 draw call 不能拿来和轨道机位比。
+- 第一人称的准星匾额判定每 8 帧遍历一次注册表条目数组（约百级），不做逐帧 Raycaster；碰撞体在 `enter()` 时一次性烘好，主循环只做 AABB 数值比较。
 
 ## 十、验证方式
 
@@ -210,7 +221,7 @@ bakeDawnEnvs()
 node tools/stats.js            # 词条 / 挂载 / 匾额 / 代码行数
 node tools/stats.js --json     # 机器可读
 node tools/stats.js --plaques  # 列出全部显式匾额
-node tools/search-check.js     # 23 条搜索、分类、年代、导览、rel 断言
+node tools/search-check.js     # 37 条断言：搜索 / 分类 / 年代 / 导览 / rel / 清单 / 朝代
 ```
 
 - 改 `js/data/info.js` 或 `palace.js` 的建筑挂载后，跑 `stats.js`；同步 README 状态表，不要手写数字。
@@ -226,6 +237,7 @@ tools/probe.sh stats    # mesh / 实例 / 三角形 / draw call / geo / tex
 tools/probe.sh water    # 水面 ShaderMaterial 与 uniform 自检
 tools/probe.sh city     # GG.city.stats：四合院、连排、胡同数量
 tools/probe.sh fps      # 无头 rAF 帧率；虚拟时钟下不可信，只取 calls/tris
+tools/probe.sh v24      # 27 项：清单 / 朝代 / 第一人称的端到端交互断言
 ```
 
 探针固定以 `../index.html?nofade=1&seed=1&still=1&view=capital` 载入 iframe；可用 `q=` 透传查询串，例如 `tools/probe.sh stats 'q=view%3Doverview'`。
@@ -256,7 +268,7 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 
 - `window.__dbg` 在布局完成后可用；`__dbg.stage.renderer.info` 可读 `render.calls` / `render.triangles`。
 - `GG.errors` 收集脚本异常与 `unhandledrejection`；页面顶部出现红色错误浮层时先修它，不要只看加载层。
-- 控制台无报错、`tools/probe.sh pick` 无未命中、`search-check.js` 全绿，是改内容后的最低门槛。
+- 控制台无报错、`tools/probe.sh pick` 无未命中、`search-check.js` 全绿，是改内容后的最低门槛；改 v2.4 三块交互再补一次 `tools/probe.sh v24`（27 项必须全绿）。
 
 ## 十一、易踩的坑
 
@@ -276,13 +288,18 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 | 在 merge 之后加静态 Mesh | 绕过合批，draw call 直接上涨。静态内容放进 layout。 |
 | 把 `?still=1` 当暂停按钮 | 它冻结相机、导览、昼夜、云、水面与天候粒子，是截图确定性工具。 |
 | 手改 README 数字 | 文档已漂移；先跑 `tools/stats.js` / `tools/probe.sh` 再改。 |
+| 新界面用 `opacity` / `visibility` 淡出隐藏 | 虚拟时间截图里半透明旧界面被截进画面。CSS 过渡不跟虚拟时钟走，用 `display:none` |
+| 清单 / 朝代面板不隐藏侧栏 | 侧栏下半截从面板底下露出来。`body.quests-on` / `body.eras-on` 下必须整块隐藏侧栏 |
+| 用射线做「抬头看匾」 | 平视时射线从台基侧面穿过去，打不到高处匾额。改前方最近建筑 + 方位角 + 仰角的几何判定 |
+| 一次排多张重机位截图 | 命令被系统终止、一张都没出。拆成单张跑，降 `BUDGET`，界面自查可 `CHECK=0` |
+| 让 `orbit` 与 `fps` 同时写相机 | 两者互相抢 `lookAt`，表现为视角乱跳。`orbit.enabled` 是唯一开关 |
 
 ## 十二、代码风格
 
 - 2 空格缩进，语句结尾加分号；`const` / `let`，不用 `var`。
 - 注释写“为什么”，不写“是什么”。现状注释已大量解释取舍，改动时保留有用的“为什么”。
 - **删除死代码，避免冗余**：改完顺手清掉不再引用的函数、变量、CSS 与注释；不要留“以后可能用”的分支。
-- 单一数据源：机位进 `CONFIG.views`，配置进 `CONFIG`，词条进 `info.js`，路线进 `tour.js`，材质进 `MAT`，贴图进 `getTextures()`。不要在第二个地方复制一份。
+- 单一数据源：机位进 `CONFIG.views`，配置进 `CONFIG`（漫游参数进 `CONFIG.fps`），词条进 `info.js`，路线进 `tour.js`，清单进 `quests.js`，朝代差异进 `eras.js`，材质进 `MAT`，贴图进 `getTextures()`，已阅进度只认 `ui.visited`。不要在第二个地方复制一份。
 - 新界面文案必须双语：静态节点写 `data-zh` / `data-en`（标题类再加 `data-title-zh` / `data-title-en`），JS 用 `GG.i18n.t(zh, en)`；新增控件补 `aria-label` / `aria-pressed`，并同步 `docs/accessibility.md`。
 - 不引入 UI 框架、CSS 预处理器、构建链或第二份 Three.js；优先用现有 `GG.geo` / `GG.build` / `MAT` / `InstancedMesh`。
 - 改渲染相关代码，按 [docs/dev-tooling.md](docs/dev-tooling.md) 跑截图回归；改内容数据，跑 `search-check.js` 与 `stats.js`。
@@ -294,6 +311,7 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 - **60fps**：交接口径，仓库没有正式帧率记录（ROADMAP B16）；需真机 `?stats=1` 复测。
 - **2830 draw call / 2.97 M 三角形**：与当前 HEAD 实测（`capital` 3146 / 3.53 M，`overview` 2731 / 3.33 M）不符；来源机位待确认。
 - **截图基线**：`tools/baseline` 只有 v0.9 / v1.2 / v2.1；v2.2 未归档，v2.3+ 没有完整基线。
-- **版本号**：最新 tag 是 v2.3；HEAD 含未发布五轮内容。`docs/architecture.md` 标“v2.4–v2.5（未发版）”，与 README 的 v2.3 状态并存，以 CHANGELOG 未发布条目为准。
+- **版本号**：已打的最新 tag 是 `v2.3`；工作区是 v2.4 内容（M7 三块玩法 + 五轮场景内容收口），**tag 待打**。以 CHANGELOG 的 v2.4 条目为准。
+- **M7 人工验收**：5 分钟可用性测试与基准帧率（B16）未做，分别需要真人与真机 `?stats=1`；见 ROADMAP 第二节。自动化部分（37 条纯数据断言 + 27 项交互探针）已全绿。
 
 CHANGELOG 的历史条目仍保留当时的 1928 / 8364 / 577 与 1600+ 行，是版本记录，不是现状；引用现状以 README、`tools/probe.sh city` 与 `node tools/stats.js` 为准。

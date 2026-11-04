@@ -777,6 +777,274 @@ body.hide-ui #stats { display: none; }
   transform: translate(-50%, 0);
 }
 
+/* ---------------- 探索清单 / 明清对比 ----------------
+   两个面板共用侧栏的位置：打开时盖住索引，不碰右侧信息卡。 */
+#quests, #era {
+  position: fixed;
+  top: 108px;
+  left: 22px;
+  width: 320px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  z-index: 55;
+  padding: 18px 18px 16px;
+  background: linear-gradient(150deg, rgba(24, 19, 14, 0.96), rgba(12, 10, 7, 0.97));
+  border: 1px solid var(--gold-line);
+  border-top: 2px solid var(--gold);
+  border-radius: 2px;
+  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+#quests[hidden], #era[hidden], #quest-toast[hidden], #fps-plaque[hidden] { display: none; }
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--gold-line);
+  padding-bottom: 10px;
+}
+.panel-head h3 {
+  margin: 0;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: #fbf4e4;
+}
+.panel-x {
+  border: 0;
+  background: transparent;
+  color: var(--paper-dim);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 3px;
+}
+.panel-x:hover { color: var(--gold); }
+#quests-intro, #era-intro, #quests-foot, #era-disclaimer {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.85;
+  color: rgba(242, 234, 217, 0.6);
+}
+#quests-foot, #era-disclaimer {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gold-line);
+  font-size: 10px;
+  color: rgba(217, 182, 97, 0.7);
+}
+
+/* 清单分组 */
+.q-group { margin-top: 16px; }
+.q-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.q-head h4 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+.q-count { font-size: 10px; color: rgba(217, 182, 97, 0.62); font-variant-numeric: tabular-nums; }
+.q-done { font-size: 10px; color: #f0d692; }
+.q-hint { margin: 5px 0 8px; font-size: 10.5px; line-height: 1.7; color: rgba(242, 234, 217, 0.54); }
+.q-items { display: flex; flex-wrap: wrap; gap: 5px; }
+.q-item {
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(242, 234, 217, 0.78);
+  background: rgba(217, 182, 97, 0.05);
+  border: 1px solid rgba(217, 182, 97, 0.22);
+  border-radius: 2px;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.q-item:hover { color: var(--ink); background: var(--gold); border-color: var(--gold); }
+.q-item.visited { color: rgba(217, 182, 97, 0.9); border-color: var(--gold-dim); }
+.q-tick { display: inline-block; width: 13px; color: var(--gold); }
+.q-group.complete .q-head h4 { color: #f0d692; }
+
+/* 完成提示：一次性的金色小卡，可关闭 */
+#quest-toast {
+  position: fixed;
+  top: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px 11px 18px;
+  background: linear-gradient(120deg, rgba(46, 34, 17, 0.96), rgba(20, 15, 9, 0.96));
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  box-shadow: 0 0 26px rgba(217, 182, 97, 0.26), 0 14px 40px rgba(0, 0, 0, 0.5);
+  color: #f6e3b4;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+#quest-toast button {
+  border: 0;
+  background: transparent;
+  color: rgba(246, 227, 180, 0.7);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+#quest-toast button:hover { color: #fff; }
+
+/* 朝代 tab 与差异清单 */
+#era-tabs { display: flex; gap: 6px; margin-top: 14px; }
+.era-tab {
+  flex: 1;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: rgba(217, 182, 97, 0.72);
+  background: transparent;
+  border: 1px solid var(--gold-line);
+  border-radius: 2px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+.era-tab.active { color: var(--ink); background: var(--gold); border-color: var(--gold); }
+.era-span { display: block; font-size: 9px; opacity: 0.72; letter-spacing: 0; }
+#era-summary {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  line-height: 1.85;
+  color: rgba(242, 234, 217, 0.82);
+}
+#era-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.era-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  background: rgba(217, 182, 97, 0.04);
+  border: 1px solid rgba(217, 182, 97, 0.16);
+  border-left: 2px solid var(--gold-dim);
+  border-radius: 2px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
+}
+.era-item:hover { background: rgba(217, 182, 97, 0.11); border-left-color: var(--gold); }
+.era-name { display: block; font-size: 12.5px; letter-spacing: 0.08em; color: #fbf4e4; }
+.era-when { display: block; margin-top: 3px; font-size: 10px; color: var(--gold); }
+.era-what { display: block; margin-top: 6px; font-size: 11px; line-height: 1.75; color: rgba(242, 234, 217, 0.78); }
+.era-src { display: block; margin-top: 5px; font-size: 10px; line-height: 1.65; color: rgba(242, 234, 217, 0.5); }
+
+/* 信息卡里的朝代差异注记 */
+.info-era {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  background: rgba(217, 182, 97, 0.07);
+  border-left: 2px solid var(--gold);
+}
+#info-era-cap { font-size: 10px; letter-spacing: 0.08em; color: var(--gold); }
+#info-era-text {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.85;
+  color: rgba(242, 234, 217, 0.82);
+}
+
+/* ---------------- 第一人称 ---------------- */
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  z-index: 65;
+  display: none;
+  pointer-events: none;
+  opacity: 0.72;
+}
+#crosshair i, #crosshair i::before {
+  display: block;
+  background: rgba(246, 227, 180, 0.9);
+}
+#crosshair i { position: absolute; left: 8px; top: 0; width: 2px; height: 18px; }
+#crosshair i::before { content: ''; position: absolute; left: -8px; top: 8px; width: 18px; height: 2px; }
+#fps-plaque {
+  position: fixed;
+  top: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 66;
+  padding: 7px 18px;
+  background: rgba(16, 12, 8, 0.82);
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  font-family: "Songti SC", "STSong", "SimSun", serif;
+  font-size: 19px;
+  letter-spacing: 0.22em;
+  color: #f6e3b4;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#fps-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 65;
+  display: none;
+  text-align: center;
+  font-size: 11px;
+  line-height: 2;
+  color: rgba(242, 234, 217, 0.82);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+#fps-hint b { color: var(--gold); font-weight: 500; letter-spacing: 0.1em; }
+#fps-exit {
+  position: fixed;
+  top: 22px;
+  right: 26px;
+  z-index: 70;
+  display: none;
+  background: rgba(16, 12, 8, 0.82);
+  border-color: var(--gold-dim);
+  color: var(--paper);
+}
+body.fps-on #crosshair, body.fps-on #fps-hint { display: block; }
+body.fps-on #fps-exit { display: inline-block; }
+/* display:none 而不是 opacity/visibility：截图用虚拟时间，CSS 淡出
+   过渡不会跟着走完，半透明的旧界面会被截进画面。display 也顺带移出 Tab 顺序。 */
+body.fps-on #brand,
+body.fps-on #sidebar,
+body.fps-on #views,
+body.fps-on #tools,
+body.fps-on #hint,
+body.fps-on #compass,
+body.fps-on #labels,
+body.fps-on #info,
+body.fps-on #quests,
+body.fps-on #era,
+body.fps-on #quest-toast,
+body.fps-on #toast {
+  display: none !important;
+}
+body.hide-ui #quests,
+body.hide-ui #era,
+body.hide-ui #quest-toast {
+  display: none !important;
+}
+/* 面板盖在侧栏上，侧栏必须整块退场，否则下半截会从面板底下露出来 */
+body.quests-on #sidebar,
+body.eras-on #sidebar {
+  display: none !important;
+}
+
 /* ---------------- 键盘焦点 ---------------- */
 :focus-visible {
   outline: 1px solid var(--gold);
@@ -1096,4 +1364,8 @@ body.hide-labels #labels { display: none; }
   body.tour-on #sidebar,
   body.tour-on #info { display: none; }
   #toast { bottom: 150px; }
+  /* 窄屏只保证窗口变窄不散架：面板收窄、完成提示不越界 */
+  #quests, #era { width: calc(100vw - 44px); max-height: 46vh; }
+  #quest-toast { top: 70px; max-width: calc(100vw - 32px); }
+  #fps-plaque { font-size: 15px; }
 }

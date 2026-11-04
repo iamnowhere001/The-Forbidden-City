@@ -29,6 +29,8 @@
     this.els = opts.els;               // { info, name, en, cat, year, desc }
     this.onPick = opts.onPick || function () {};
     this.onRel = opts.onRel || function () {};
+    /* 朝代对比说明由 eras.js 提供，ui 不反向依赖那个实例 */
+    this.eraNoteFn = opts.eraNote || null;
     this.items = [];                   // 与侧栏顺序一致的建筑组
     this.byName = new Map();
     this.registry = [];
@@ -186,6 +188,10 @@
     this.countEl.textContent = names.size ? `${done} / ${names.size}` : '';
   };
 
+  UI.prototype.hasVisited = function (name) {
+    return this.visited.has(name);
+  };
+
   UI.prototype.markVisited = function (name) {
     if (!name || this.visited.has(name)) return;
     this.visited.add(name);
@@ -194,6 +200,8 @@
       .find((el) => el.dataset.name === name);
     if (li) li.classList.add('visited');
     this.updateCount();
+    /* 探索清单复用「已阅」，不另存一份进度 */
+    document.dispatchEvent(new CustomEvent('gg:visited', { detail: { name } }));
   };
 
   /** 语言切换后重建侧栏，并保持信息卡内容 */
@@ -219,6 +227,18 @@
     this.els.cat.textContent = GG.i18n.cat(info.cat || '');
     this.els.year.textContent = info.year || '';
     this.els.desc.textContent = info.desc || '';
+
+    /* 朝代对比：只在当前词条有明清差异时出现，文案带年代与依据 */
+    const era = this.eraNoteFn ? this.eraNoteFn(info) : null;
+    if (this.els.era) {
+      if (era) {
+        this.els.eraCap.textContent = era.label || '';
+        this.els.eraText.textContent = era.text || '';
+        this.els.era.hidden = false;
+      } else {
+        this.els.era.hidden = true;
+      }
+    }
 
     /* 结构化字段：有值才显示，避免空行 */
     const rows = [

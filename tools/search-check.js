@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* ============================================================
-   搜索规则自测
-   不依赖 DOM，直接对 js/data/info.js 的数据跑断言。
-   对应 v2.3 T6.2 的验收标准：
+   搜索与内容数据自测
+   不依赖 DOM，直接对 js/data/*.js 的纯数据跑断言。
+   覆盖 v2.3 T6.2 与 v2.4 的探索清单 / 朝代对比数据：
      taihe / 太和 / thd 命中太和殿；
      分类过滤返回该分类全部条目；
      年代过滤只返回 year 含该字的条目。
@@ -99,6 +99,69 @@ Object.entries(INFO).forEach(([k, v]) => (v.rel || []).forEach((r) => {
   if (!keys.has(r)) dangling.push(k + '→' + r);
 }));
 check('rel 引用全部存在', dangling.length === 0, dangling.join(','));
+
+console.log('\n探索清单（v2.4 T7.1）');
+require(path.resolve(__dirname, '../js/data/quests.js'));
+require(path.resolve(__dirname, '../js/quests.js'));
+const QUESTS = window.GG.QUESTS;
+const progress = window.GG.Quests.progress;
+const groupIds = QUESTS.groups.map((g) => g.id);
+check('组 id 不重复', new Set(groupIds).size === groupIds.length, groupIds.join(','));
+check('三组条目数为 10 / 12 / 5',
+  QUESTS.groups.map((g) => g.items.length).join('/') === '10/12/5',
+  QUESTS.groups.map((g) => g.items.length).join('/'));
+const missingItems = [];
+const seenItems = new Set();
+const dupItems = [];
+for (const g of QUESTS.groups) {
+  for (const k of g.items) {
+    if (!keys.has(k)) missingItems.push(g.id + '→' + k);
+    if (seenItems.has(k)) dupItems.push(k);
+    seenItems.add(k);
+  }
+}
+check('清单条目全部有词条', missingItems.length === 0, missingItems.join(','));
+check('清单条目跨组不重复', dupItems.length === 0, dupItems.join(','));
+const noGroupText = QUESTS.groups.filter((g) =>
+  ['title', 'short', 'hint', 'done'].some((f) => !g[f] || !g[f].zh || !g[f].en));
+check('每组标题 / 简称 / 引导语 / 完成语双语齐全', noGroupText.length === 0,
+  noGroupText.map((g) => g.id).join(','));
+const g0 = QUESTS.groups[0];
+check('清单进度：空集合未完成', !progress(g0, () => false).complete && progress(g0, () => false).done === 0);
+check('清单进度：全集合完成且计数正确',
+  progress(g0, () => true).complete && progress(g0, () => true).done === g0.items.length);
+const one = new Set([INFO[g0.items[0]].name]);
+check('清单进度：部分完成不误报',
+  progress(g0, (n) => one.has(n)).done === 1 && !progress(g0, (n) => one.has(n)).complete);
+
+console.log('\n朝代对比（v2.4 T7.2）');
+require(path.resolve(__dirname, '../js/data/eras.js'));
+const ERAS = window.GG.ERAS;
+const eraIds = ERAS.eras.map((e) => e.id);
+check('initial 指向存在的朝代', eraIds.includes(ERAS.initial), ERAS.initial);
+check('朝代 id 不重复且为 ming / qing',
+  new Set(eraIds).size === 2 && eraIds.includes('ming') && eraIds.includes('qing'), eraIds.join(','));
+check('免责声明含「示意对比，非史实复原动画」',
+  ERAS.disclaimer.zh.includes('示意对比，非史实复原动画') && !!ERAS.disclaimer.en);
+const badChanges = [];
+const changeNames = new Set();
+const dupChangeNames = [];
+for (const c of ERAS.changes) {
+  const info = INFO[c.key];
+  if (!info) { badChanges.push(c.key + '→无词条'); continue; }
+  if (changeNames.has(info.name)) dupChangeNames.push(info.name);
+  changeNames.add(info.name);
+  for (const f of ['era', 'ming', 'qing', 'source']) {
+    if (!c[f] || !c[f].zh || !c[f].en) badChanges.push(c.key + '→' + f + ' 缺双语');
+  }
+  if (!/依据/.test(c.source.zh || '') || !/Basis/.test(c.source.en || '')) {
+    badChanges.push(c.key + '→依据说明缺失');
+  }
+}
+check('差异条目全部有词条、年代、双语说明与依据', badChanges.length === 0, badChanges.join(','));
+check('差异条目按词条名不重复（信息卡注记才不会串）', dupChangeNames.length === 0, dupChangeNames.join(','));
+check('每条差异都有明代与清代两种说明',
+  ERAS.changes.every((c) => c.ming.zh !== c.qing.zh));
 
 console.log(`\n结果：${pass} 通过，${fail} 失败\n`);
 process.exitCode = fail ? 1 : 0;

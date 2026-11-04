@@ -155,5 +155,10 @@
     return !!this._fly;
   };
 
+  /** 第一人称接管相机前，取消可能还在进行的镜头飞行 */
+  Views.prototype.cancel = function () {
+    this._fly = null;
+  };
+
   GG.Views = Views;
 })();

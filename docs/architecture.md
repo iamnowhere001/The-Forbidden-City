@@ -27,7 +27,7 @@
 ```
 debug → config → i18n → three → sky → water → weather → orbit → renderer
       → views → labels → picking → ui → tour → textures → geo → buildings → tiantan → city
-      → data/info → data/tour → palace → app
+      → data/info → data/tour → data/quests → data/eras → quests → eras → fps → palace → app
 ```
 
 后面的模块依赖前面挂在 `window.GG` 上的对象，调换会直接白屏。典型例子：`buildings.js` 的 `MAT.water` 取自 `water.js` 创建的材质单例。
@@ -49,7 +49,7 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 | `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
 | `labels.js` | 标签 DOM、投影、避让、优先级过滤 | `GG.Labels`（`build` / `update` / `invalidate`） |
 | `picking.js` | Raycaster 拾取、悬停高亮、地面光圈 | `GG.Picker`（`pickAt` / `setHover`） |
-| `ui.js` | 侧栏索引（搜索 / 分类 / 年代 / 已阅）、信息卡与互链 | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited`） |
+| `ui.js` | 侧栏索引（搜索 / 分类 / 年代 / 已阅）、信息卡与互链；`markVisited` 派发 `gg:visited` | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited` / `hasVisited`） |
 | `tour.js` | 导览播放器：多路线切换、换站、暂停、字幕 | `GG.Tour`（`start` / `setRoute` / `next` / `prev` / `stop`） |
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, mergeGroup, optimizeStatics, mergeWorldStatics, lerp }` |
@@ -57,9 +57,24 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 | `tiantan.js` | 天坛（清乾隆十九年格局）：坛墙、祈谷坛、圜丘坛、皇穹宇、斋宫、神乐署、柏林 | `GG.tiantan.{ build, footprintPath, stats }` |
 | `city.js` | 宫城之外的京师：皇城 / 内城 / 外城城墙与城门、先农坛、北海、中南海、胡同院落与夜灯 | `GG.city`（`build(scene, reg)` / `treeSpots` / `stats`） |
 | `data/info.js` | 建筑词条（纯数据） | `GG.INFO` |
-| `data/tour.js` | 12 站导览路线与中英字幕 | `GG.TOUR` |
+| `data/tour.js` | 导览路线与中英字幕（纯数据） | `GG.TOUR` |
+| `data/quests.js` | 探索清单：三组 27 项，只存 info key（纯数据） | `GG.QUESTS` |
+| `data/eras.js` | 明清差异：8 处，含年代标注、双语说明与依据（纯数据） | `GG.ERAS` |
+| `quests.js` | 清单面板：进度计算、就地刷新勾选、一次性完成提示 | `GG.Quests`（`open` / `close` / `toggle` / `refresh` / `progress`） |
+| `eras.js` | 朝代面板：tab 切换、差异清单、信息卡注记供稿 | `GG.Eras`（`set` / `open` / `close` / `noteFor`） |
+| `fps.js` | 第一人称：WASD、Pointer Lock / 拖拽转头、包围盒碰撞、抬头看匾、退出反算 orbit | `GG.FPS`（`enter` / `exit` / `update` / `anchor` / `blocked`） |
 | `palace.js` | 总平面布置，内部按区域拆成五段函数 | `GG.layout(scene)`、`GG.REGISTRY` |
-| `app.js` | 编排初始化与主循环，自执行 | 无导出 |
+| `app.js` | 编排初始化与主循环，自执行；`window.__dbg` 暴露全部子系统 | 无导出 |
+
+### 两套相机状态（v2.4）
+
+第一人称与轨道控制器**互斥**：`FPS.enter()` 置 `orbit.enabled=false`、取消镜头飞行，主循环只让 `fps.update(dt)`
+写相机；`Orbit` 的 `move` / `wheel` / `down` 都检查 `enabled`。退出时 `FPS.exit()` 把注视点放到当前相机正前方
+地面，再 `orbit.syncFromCamera()` 反算 `theta / phi / radius`，并把 `phi` 夹进合法区间后立刻 `update(0)`，
+避免第一帧从旧球坐标插值回来。两套状态不能同时写相机，否则会互相抢 `lookAt`。
+
+清单与朝代面板共用左侧栏的位置，`body.quests-on` / `body.eras-on` 下侧栏 `display:none`；
+`body.fps-on` 下所有轨道 UI 同样隐藏（用 `display:none`，不用 CSS 淡出，截图虚拟时间下过渡不会走完）。
 
 ### 京师范围（`city.js`）
 
@@ -122,8 +137,9 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 4. **机位只有一份**：`GG.CONFIG.views`。按钮、键盘、`?view=` 都从它推导，不在 `app.js` 或 `index.html` 另写一套。
 5. **材质走单例**：新材质挂到 `buildMaterials()` 的 `MAT` 里复用，不要在每座建筑里 `new MeshStandardMaterial`。自定义着色器材质自成一个模块（参照 `js/water.js`），同样只建一份。
 6. **不用 ES Module**：`file://` 下会因 CORS 失效。新模块继续 IIFE 挂 `window.GG`。
-7. **可调参数进配置**：颜色、曝光、光照强度、标签阈值、机位都放 `GG.CONFIG`。
-8. **形制按等级分档**，不要一处一套写法：
+7. **可调参数进配置**：颜色、曝光、光照强度、标签阈值、机位、第一人称参数都放 `GG.CONFIG`（漫游在 `CONFIG.fps`）。
+8. **玩法边界**：完成条件是「看到即完成」（打开词条、走到某位置），判定复用 `ui.hasVisited()`；需要累积、比较、刷取或排行的是游戏化，不做。朝代对比只切说明文字，不改几何。
+9. **形制按等级分档**，不要一处一套写法：
 
 | 项 | 高等级（三大殿 / 中轴门楼） | 次等级 | 实现位置 |
 | --- | --- | --- | --- |

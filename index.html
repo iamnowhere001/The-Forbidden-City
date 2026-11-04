@@ -74,6 +74,11 @@
     <button class="tool mini" id="btn-tplay" aria-pressed="false" title="昼夜流转" aria-label="昼夜流转" data-title-zh="昼夜流转（约 90 秒一昼夜）" data-title-en="Animate the day cycle (about 90s)">▶</button>
   </div>
   <div class="sep"></div>
+  <button class="tool" id="btn-quests" title="探索清单" aria-label="探索清单" aria-expanded="false" aria-pressed="false" data-title-zh="探索清单（Q）" data-title-en="Exploration checklist (Q)" data-zh="探索" data-en="Quests">探索</button>
+  <!-- 标题与 aria-label 由 eras.js 按当前朝代动态写，不走 data-title-* -->
+  <button class="tool" id="btn-era" title="明清格局对比" aria-label="明清格局对比" aria-expanded="false" aria-pressed="false">明清 · 清</button>
+  <button class="tool" id="btn-fps" title="第一人称漫游" aria-label="第一人称漫游" data-title-zh="第一人称漫游（F）" data-title-en="Walk inside (F)" data-zh="漫游" data-en="Walk">漫游</button>
+  <div class="sep"></div>
   <button class="tool" id="btn-tour" title="开始导览" aria-label="开始导览" data-title-zh="开始导览" data-title-en="Start the guided tour" data-zh="导览" data-en="Tour">导览</button>
   <button class="tool" id="btn-share" title="复制当前视角链接" aria-label="复制当前视角链接" data-title-zh="复制当前视角链接" data-title-en="Copy a link to this view" data-zh="分享" data-en="Share">分享</button>
   <button class="tool" id="btn-shot" title="保存当前画面" aria-label="保存当前画面" data-title-zh="保存当前画面" data-title-en="Save this view as PNG" data-zh="存图" data-en="Save">存图</button>
@@ -124,6 +129,36 @@
   </div>
 </section>
 
+<!-- 探索清单：三组由 js/data/quests.js 生成，判定复用「已阅」 -->
+<section id="quests" role="region" aria-label="探索清单" hidden>
+  <div class="panel-head">
+    <h3 data-zh="探索清单" data-en="Exploration Checklist">探索清单</h3>
+    <button id="quest-close" class="panel-x" aria-label="关闭探索清单" data-title-zh="关闭探索清单" data-title-en="Close the checklist">×</button>
+  </div>
+  <p id="quests-intro"></p>
+  <div id="quests-groups"></div>
+  <p id="quests-foot"></p>
+</section>
+
+<!-- 一组清单完成时的一次性提示；关闭后不再出现 -->
+<div id="quest-toast" role="status" aria-live="polite" hidden>
+  <span id="quest-toast-text"></span>
+  <button id="quest-toast-close" aria-label="关闭提示" data-title-zh="关闭提示" data-title-en="Dismiss">×</button>
+</div>
+
+<!-- 明清对比：只切换说明文字，不动几何 -->
+<section id="era" role="region" aria-label="明清格局对比" hidden>
+  <div class="panel-head">
+    <h3 data-zh="明清格局对比" data-en="Ming &amp; Qing Compared">明清格局对比</h3>
+    <button id="era-close" class="panel-x" aria-label="关闭朝代对比" data-title-zh="关闭朝代对比" data-title-en="Close the comparison">×</button>
+  </div>
+  <div id="era-tabs" role="tablist" aria-label="选择朝代"></div>
+  <p id="era-intro"></p>
+  <p id="era-summary"></p>
+  <div id="era-list"></div>
+  <p id="era-disclaimer"></p>
+</section>
+
 <section id="info" role="region" aria-live="polite" aria-labelledby="info-name">
   <button id="info-close" aria-label="关闭">×</button>
   <span id="info-cat"></span>
@@ -132,6 +167,10 @@
   <div id="info-year"></div>
   <dl id="info-meta" class="info-meta" hidden></dl>
   <p id="info-desc"></p>
+  <div id="info-era" class="info-era" hidden>
+    <span id="info-era-cap"></span>
+    <p id="info-era-text"></p>
+  </div>
   <details id="info-note" class="info-note" hidden>
     <summary data-zh="史料与考据" data-en="Notes & Sources">史料与考据</summary>
     <p id="info-note-text"></p>
@@ -147,6 +186,19 @@
 </section>
 
 <div id="stats" hidden aria-hidden="true"></div>
+
+<!-- 第一人称：准星 / 抬头看匾 / 操作提示 / 退出。body.fps-on 时才显示 -->
+<div id="crosshair" aria-hidden="true"><i></i></div>
+<div id="fps-plaque" hidden aria-live="polite"><span id="fps-plaque-name"></span></div>
+<div id="fps-hint" role="status">
+  <div>
+    <b data-zh="WASD" data-en="WASD">WASD</b> <span data-zh="移动 ·" data-en="move ·">移动 ·</span>
+    <b data-zh="鼠标" data-en="Mouse">鼠标</b> <span data-zh="转头 ·" data-en="look ·">转头 ·</span>
+    <b data-zh="Shift" data-en="Shift">Shift</b> <span data-zh="快走" data-en="walk faster">快走</span>
+  </div>
+  <div data-zh="抬头看檐下的匾额 · 按 Esc 或 F 退出" data-en="Look up to read a plaque · press Esc or F to exit">抬头看檐下的匾额 · 按 Esc 或 F 退出</div>
+</div>
+<button id="fps-exit" class="tool" data-zh="退出漫游 (Esc)" data-en="Exit (Esc)">退出漫游 (Esc)</button>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -170,6 +222,11 @@
 <script src="js/city.js"></script>
 <script src="js/data/info.js"></script>
 <script src="js/data/tour.js"></script>
+<script src="js/data/quests.js"></script>
+<script src="js/data/eras.js"></script>
+<script src="js/quests.js"></script>
+<script src="js/eras.js"></script>
+<script src="js/fps.js"></script>
 <script src="js/palace.js"></script>
 <script src="js/app.js"></script>
 </body>

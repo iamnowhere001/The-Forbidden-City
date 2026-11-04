@@ -63,7 +63,8 @@
     };
 
     const move = (e) => {
-      if (!pointers.has(e.pointerId)) return;
+      /* 第一人称接管相机时 orbit.enabled=false，拖拽不能改球坐标 */
+      if (!this.enabled || !pointers.has(e.pointerId)) return;
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointers.size === 2) {
         const p = [...pointers.values()];
@@ -108,6 +109,7 @@
     window.addEventListener('pointercancel', up);
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('wheel', (e) => {
+      if (!this.enabled) return;          // 第一人称下滚轮不缩放轨道相机
       e.preventDefault();
       const k = Math.exp(e.deltaY * 0.0011);
       this.tRadius *= k;

@@ -8,7 +8,7 @@
   /* ?still=1：冻结相机、云层与水面动画，供截图回归做确定性比对 */
   const STILL = GG.query.get('still') === '1';
 
-  let stage, orbit, views, labels, picker, ui, tour;
+  let stage, orbit, views, labels, picker, ui, tour, quests, eras, fps;
   let registry = [];
   let selected = null;
   let clock;
@@ -71,6 +71,11 @@
     ui.hide();
     picker.setHover(null);
     picker.setSelected(null);
+  }
+
+  /** 词条名 → 场景实体：导览、探索清单、朝代对比共用一条查找路径 */
+  function findEntry(name) {
+    return registry.find((x) => x.userData.info && x.userData.info.name === name);
   }
 
   /* ============================================================
@@ -284,15 +289,20 @@
         year: document.getElementById('info-year'),
         desc: document.getElementById('info-desc'),
         meta: document.getElementById('info-meta'),
+        era: document.getElementById('info-era'),
+        eraCap: document.getElementById('info-era-cap'),
+        eraText: document.getElementById('info-era-text'),
         note: document.getElementById('info-note'),
         noteText: document.getElementById('info-note-text'),
         rel: document.getElementById('info-rel')
       },
       onPick: focusBuilding,
       onRel: (name) => {
-        const entry = registry.find((x) => x.userData.info && x.userData.info.name === name);
+        const entry = findEntry(name);
         if (entry) focusBuilding(entry);
-      }
+      },
+      /* 信息卡里的朝代差异由 eras 提供；布局完成前返回 null */
+      eraNote: (info) => (eras ? eras.noteFor(info) : null)
     });
 
     stage = new GG.Stage(canvas);
@@ -365,15 +375,46 @@
 
     tour = new GG.Tour({
       views,
-      findEntry: (name) => registry.find(
-        (x) => x.userData.info && x.userData.info.name === name
-      ),
+      findEntry,
       onStop: (entry) => {
         closeInfo();
         picker.setHover(entry);
       },
       onExit: () => picker.setHover(null),
       onFinish: () => toast(GG.i18n.t('导览结束', 'Tour finished'))
+    });
+
+    /* 探索清单：判定复用 ui 的「已阅」集合，不另存进度 */
+    quests = new GG.Quests({
+      hasVisited: (name) => ui.hasVisited(name),
+      findEntry,
+      onFocus: focusBuilding
+    });
+
+    /* 朝代对比：切换后若信息卡开着，立刻重绘那段差异注记 */
+    eras = new GG.Eras({
+      findEntry,
+      onFocus: focusBuilding,
+      onChange: () => {
+        if (selected) ui.show(selected.userData.info);
+      }
+    });
+
+    fps = new GG.FPS({
+      camera: stage.camera,
+      canvas,
+      orbit,
+      views,
+      picker,
+      registry,
+      onEnter: () => {
+        if (tour.active) tour.stop();
+        closeInfo();
+        quests.close();
+        eras.close();
+        toast(GG.i18n.t('已进入漫游 · Esc 退出', 'Walk mode · press Esc to exit'));
+      },
+      onExit: () => toast(GG.i18n.t('已回到全景视角', 'Back to the orbit view'))
     });
 
     GG.i18n.applyStatic();
@@ -384,7 +425,7 @@
     initStats();
     readQuery();
     /* tools/probe.html 依赖这里的引用做拾取 / 规模断言 */
-    window.__dbg = { stage, orbit, registry, GG, THREE, picker, labels, views, ui };
+    window.__dbg = { stage, orbit, registry, GG, THREE, picker, labels, views, ui, quests, eras, fps };
     animate();
     window.__mark && window.__mark('first-frame-done');
   }
@@ -427,6 +468,13 @@
     canvas.addEventListener('pointercancel', noteUp);
     canvas.addEventListener('click', (e) => {
       if (downMoved) { downMoved = false; return; }   // 拖拽后的抬起不算点击
+      if (fps.active) {
+        /* Pointer Lock 下 clientX/Y 停在锁定前，拾取改用画面中心（准星） */
+        const rect = canvas.getBoundingClientRect();
+        const hit = picker.pickAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        if (hit) selectBuilding(hit);
+        return;
+      }
       const g = picker.pickAt(e.clientX, e.clientY);
       if (g) selectBuilding(g);
       else closeInfo();
@@ -446,6 +494,8 @@
         toast(GG.i18n.t('已退出导览', 'Tour exited'));
       } else {
         closeInfo();
+        quests.close();
+        eras.close();
         tour.start();
         toast(GG.i18n.t('导览开始，共 ' + (tour.stops.length || 0) + ' 站',
           'Tour started, ' + (tour.stops.length || 0) + ' stops'));
@@ -497,6 +547,11 @@
       e.currentTarget.setAttribute('aria-pressed', String(on));
     });
 
+    /* 探索 / 朝代对比共用左侧栏位置，同一时刻只开一个 */
+    document.getElementById('btn-quests').addEventListener('click', () => eras.close());
+    document.getElementById('btn-era').addEventListener('click', () => quests.close());
+    document.getElementById('btn-fps').addEventListener('click', () => fps.enter());
+
     document.getElementById('btn-reset').addEventListener('click', () => {
       closeInfo();
       views.set('overview');
@@ -524,9 +579,20 @@
     for (const v of C.views) if (v.key) keyMap[v.key] = v.id;
 
     window.addEventListener('keydown', (e) => {
+      const k = e.key;
+
+      /* 第一人称接管相机：Esc / F 退出，其余键位由 fps.js 自己处理。
+         这段要放在输入框判断之前，否则焦点残留在搜索框时退不出去。 */
+      if (fps.active) {
+        if (k === 'Escape' || k === 'f' || k === 'F') {
+          e.preventDefault();
+          fps.exit();
+        }
+        return;
+      }
+
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      const k = e.key;
 
       /* 导览进行中，方向键与空格交给导览 */
       if (tour.active) {
@@ -550,6 +616,9 @@
         toggleTour();
         return;
       }
+      if (k === 'q' || k === 'Q') { quests.toggle(); eras.close(); return; }
+      if (k === 'e' || k === 'E') { eras.toggle(); quests.close(); return; }
+      if (k === 'f' || k === 'F') { fps.enter(); return; }
       if (k === ' ') {
         e.preventDefault();
         orbit.autoRotate = !orbit.autoRotate;
@@ -615,6 +684,12 @@
     if (!qv && !qp) setTimeout(() => views.set('overview'), 480);
     if (q.get('tour') === '1') setTimeout(() => tour.start(), 800);
     if (q.get('play') === '1') setDayPlay(true);
+
+    if (q.get('quest') === '1') { eras.close(); quests.open(); }
+    const qEra = q.get('era');
+    if (qEra === 'ming' || qEra === 'qing') { quests.close(); eras.set(qEra); eras.open(); }
+    /* ?fps=1 供自动化与演示：不请求 Pointer Lock，避免无头环境卡住 */
+    if (q.get('fps') === '1') setTimeout(() => fps.enter({ noLock: true }), 900);
   }
 
   /* 动态分辨率结算：每秒一次，掉帧先降档、稳定两窗再升档 */
@@ -651,8 +726,13 @@
     const dt = Math.min(clock.getDelta(), 0.05);
 
     if (!STILL) {
-      views.step();
-      if (!views.isFlying()) orbit.update(dt);
+      if (fps.active) {
+        /* orbit.enabled=false，此刻只有 fps 写相机，不能让轨道更新覆盖它 */
+        fps.update(dt);
+      } else {
+        views.step();
+        if (!views.isFlying()) orbit.update(dt);
+      }
       if (dayPlay) stepDay(dt);
       stage.tick(dt);
     } else if (stage.skyDome) {
@@ -660,22 +740,28 @@
       stage.skyDome.position.copy(stage.camera.position);
     }
 
-    /* 阴影锚点跟随注视点：太阳不动 + 锚点不动 = 零阴影开销 */
-    stage.setShadowAnchor(orbit.target.x, orbit.target.y, orbit.target.z);
+    /* 阴影锚点：第一人称跟人走，否则跟轨道注视点 */
+    const anchor = fps.active ? fps.anchor() : orbit.target;
+    stage.setShadowAnchor(anchor.x, anchor.y, anchor.z);
     stage.updateShadowFit();
 
     picker.update(dt);
-    /* 悬停拾取每帧至多一次；拖拽 / 平移中跳过 */
-    if (hoverDirty && !orbit.dragging && !orbit.panning) {
+    /* 悬停拾取每帧至多一次；第一人称改用准星拾取（在 fps.update 里节流） */
+    if (!fps.active && hoverDirty && !orbit.dragging && !orbit.panning) {
       hoverDirty = false;
       picker.setHover(picker.pickAt(hoverX, hoverY));
+    } else if (fps.active) {
+      hoverDirty = false;
     }
-    updateCompass();
+    if (!fps.active) updateCompass();
     /* 粒子的下落由 dt 驱动；STILL 时 dt 传 0，位置仍跟随相机 */
     if (GG.weather) GG.weather.tick(STILL ? 0 : dt, stage.camera);
 
-    labelFrame++;
-    if (labelFrame % C.label.updateEvery === 0) labels.update();
+    /* 第一人称下标签层被隐藏，不必再算投影与避让 */
+    if (!fps.active) {
+      labelFrame++;
+      if (labelFrame % C.label.updateEvery === 0) labels.update();
+    }
 
     stage.render();
     updateStats(dt);
