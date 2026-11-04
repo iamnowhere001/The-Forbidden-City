@@ -145,13 +145,13 @@ http://localhost:8931/?weather=rain&stats=1
 | 匾额 | 77 块（65 块显式挂匾 + 六宫 12 院自动生成） |
 | 导览 | 2 条线，各 12 站（中轴 / 六宫） |
 | 天候 | `clear` / `snow` / `rain` / `autumn` 四套 |
-| 四合院 | 1928 座完整院落（近景）+ 8364 段连排（远景，约 2.5 万间），共 6 个 `InstancedMesh` |
-| 胡同 | 577 段街巷铺装，合并为 1 个 mesh |
+| 四合院 | 1898 座完整院落（近景）+ 7924 段连排（远景，约 2.4 万间），共 6 个 `InstancedMesh` |
+| 胡同 | 592 段街巷铺装，合并为 1 个 mesh |
 | 规模 | 3146 draw call / 3.53 M 三角形（含宫城与天坛，`?stats=1` 实测） |
 | 代码规模 | 12099 行原生 JS（不含 vendored Three.js） |
 | 运行依赖 | Three.js r149 本地副本，无其他依赖 |
 
-以上数字由 `node tools/stats.js` 从 `js/data/info.js`、`js/palace.js` 与 `js/city.js` 直接统计，不手工维护。改完建筑或词条后跑一次，再同步本节。`四合院` / `胡同` 两行取自运行时 `GG.city.stats`，`规模` 一行取自 `?stats=1`。
+以上数字由 `node tools/stats.js` 从 `js/data/info.js`、`js/palace.js` 与 `js/city.js` 直接统计，不手工维护。改完建筑或词条后跑一次，再同步本节。`四合院` / `胡同` 两行取自 `tools/probe.sh city` 的运行时 `GG.city.stats`（探针默认 `view=capital`、`seed=1`、`still=1`，2026-11-03 实测），`规模` 一行取自 `?stats=1`。
 
 ---
 
@@ -159,7 +159,7 @@ http://localhost:8931/?weather=rain&stats=1
 
 | 限制 | 影响 |
 | --- | --- |
-| 布局逻辑拆成五段函数（`palace.js` 仍 1600+ 行） | 分段后可局部阅读，但共享量仍靠闭包传递 |
+| 布局逻辑拆成五段函数（`palace.js` 仍是最大的单文件，行数以 `node tools/stats.js` 为准） | 分段后可局部阅读，但共享量仍靠闭包传递 |
 | 截图回归跑在 SwiftShader 软渲染上 | 只能验证“没变”，不能验证真机观感与帧率 |
 | 无单元测试、无 LOD | 纯函数改动靠人眼与截图，远景始终全精度渲染 |
 | 水面为着色器示意 | 无真实倒影与水位；近景靠高频波纹补细节，岸线用浅滩带与条石驳岸补过渡，不做镜面 pass |

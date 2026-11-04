@@ -93,9 +93,20 @@ fi
 
 # ---------- 静态服务器 ----------
 SERVER_PID=""
+PROFILE="/tmp/palace-shot-profile-$$"
+
+# 固定 profile 是上一版脚本的隐性地雷：任何一次超时被 kill 后，残留的
+# Chrome 进程仍持有该目录，后续启动只会“把 URL 转发给已存在的实例”然后
+# 立刻 exit 0 —— 不出图、不报错、看门狗空等到超时。改成按进程号隔离，
+# 每次截图前再清一遍，超时后也不会污染下一张。
+reset_profile() {
+  pkill -f "user-data-dir=$PROFILE" 2>/dev/null
+  rm -rf "$PROFILE"
+}
+
 cleanup() {
   if [ -n "$SERVER_PID" ]; then kill "$SERVER_PID" 2>/dev/null; fi
-  pkill -f 'user-data-dir=/tmp/palace-shot-profile' 2>/dev/null
+  reset_profile
   [ -n "${SRV_LOG:-}" ] && rm -f "$SRV_LOG"
   return 0
 }
@@ -145,7 +156,7 @@ fi
 # 有 JS 异常时截图可能照样出图（只是内容残缺），体积闸门拦不住，
 # 所以先 dump-dom 一遍，发现错误浮层就提前退出。
 # 预检用的仍是同一个 profile、同一个服务器。
-rm -rf /tmp/palace-shot-profile   # 干净 profile，避免命中上一次的 JS 缓存
+reset_profile                     # 干净 profile，避免命中上一次的 JS 缓存与残留锁
 CHECK="${CHECK:-1}"
 if [ "$CHECK" = "1" ]; then
   printf '预检页面……'
@@ -155,7 +166,7 @@ if [ "$CHECK" = "1" ]; then
       --headless=new \
       "${GPU_FLAGS[@]}" \
       --hide-scrollbars \
-      --user-data-dir="/tmp/palace-shot-profile" \
+      --user-data-dir="$PROFILE" \
       --window-size="$SIZE" \
       --virtual-time-budget=8000 \
       --dump-dom \
@@ -190,6 +201,7 @@ for spec in "${SPECS[@]}"; do
   esac
   f="$OUT/$name.png"
   rm -f "$f"
+  reset_profile
   printf '  %-14s → %s ... ' "$name" "$(basename "$OUT")/$name.png"
   perl -e 'alarm shift; exec @ARGV' "$WATCHDOG" \
     "$CHROME" \
@@ -197,7 +209,7 @@ for spec in "${SPECS[@]}"; do
       "${GPU_FLAGS[@]}" \
       --hide-scrollbars \
       --force-device-scale-factor=1 \
-      --user-data-dir="/tmp/palace-shot-profile" \
+      --user-data-dir="$PROFILE" \
       --window-size="$SIZE" \
       --virtual-time-budget="$budget" \
       --screenshot="$f" \

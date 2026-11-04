@@ -262,6 +262,6 @@ frontCourt() → palaces() → defenses() → environs() → scatterLayer()
 
 - 缩进 2 空格，语句结尾加分号。
 - 新界面文案必须双语：静态节点写 `data-zh` / `data-en`（标题类再加 `data-title-zh` / `data-title-en`），JS 里用 `GG.i18n.t(zh, en)`。新增控件补 `aria-label` / `aria-pressed`，并同步 `docs/accessibility.md`。
-- 屋顶参数慎改：`GG.CONFIG.roof` 里的 `curv 1.55`、翼角 `lift = min(hw,hd) × 0.024`、庑殿推山系数 `0.76` 是长期调出来的结果，改动必须附前后截图。
+- 屋顶参数慎改：`GG.CONFIG.roof` 里的 `curv 1.55`、翼角 `liftRatio 0.042`（`lift = min(hw,hd) × liftRatio`）、庑殿推山系数 `0.76` 是长期调出来的结果，改动必须附前后截图。
 - 同类小构件优先 `GG.geo.merge()` 或 `InstancedMesh`，控制 draw call。
 - 改了渲染相关代码，按 [dev-tooling.md](dev-tooling.md) 跑一遍截图回归。
