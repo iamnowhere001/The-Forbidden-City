@@ -22,6 +22,8 @@
   let statsEl = null;                  // ?stats=1 性能面板
   let statsAcc = 0;
   let statsFrames = 0;
+  let labelGroupIdx = 0;               // 标注分组，指向 C.label.groups
+  let altFrame = 0;                    // 画布摘要的更新节流
   /* 动态分辨率：每秒结算帧率，掉帧先降渲染倍率，稳定后再升回 */
   const DRS = C.quality.drs;
   const drs = { i: 0, acc: 0, frames: 0, good: 0 };
@@ -46,9 +48,17 @@
      ============================================================ */
   function selectBuilding(entry) {
     selected = entry;
-    ui.show(entry.userData.info || {});
+    const info = entry.userData.info || {};
+    ui.show(info);
     picker.setHover(entry);
     picker.setSelected(entry);
+    /* 漫游时信息卡被隐藏，屏幕阅读器读不到刚点开的词条 */
+    if (fps.active) {
+      GG.a11y.announce(GG.i18n.t(
+        '准星选中 ' + info.name + '，按 Esc 退出漫游可阅读词条',
+        'Selected ' + (info.en || info.name) + '. Press Esc to leave walk mode and read the entry.'
+      ));
+    }
   }
 
   function focusBuilding(entry) {
@@ -133,6 +143,93 @@
   }
 
   /* ============================================================
+     标注分组：只让当前分类的标签留在 Tab 顺序里
+     顺序、按钮文案、键位、URL 参数都从 C.label.groups 推导
+     ============================================================ */
+  function labelGroups() {
+    return C.label.groups || [''];
+  }
+
+  function labelGroupText(cat) {
+    const suffix = cat
+      ? (GG.i18n.lang === 'en' ? GG.i18n.cat(cat) : cat)
+      : GG.i18n.t('全部', 'All');
+    return GG.i18n.t('标注 · ', 'Labels · ') + suffix;
+  }
+
+  function syncLabelGroupBtn() {
+    const b = document.getElementById('btn-label-group');
+    if (!b) return;
+    const cat = labelGroups()[labelGroupIdx] || '';
+    const text = labelGroupText(cat);
+    b.textContent = text;
+    b.title = text + GG.i18n.t('（[ / ] 切换）', ' ([ / ] to cycle)');
+    b.setAttribute('aria-label', b.title);
+    b.setAttribute('aria-pressed', String(!!cat));
+    b.classList.toggle('active', !!cat);
+  }
+
+  function setLabelGroup(cat, quiet) {
+    const list = labelGroups();
+    const idx = list.indexOf(cat || '');
+    labelGroupIdx = idx < 0 ? 0 : idx;
+    if (labels) labels.setGroup(list[labelGroupIdx], quiet);
+    syncLabelGroupBtn();
+    return list[labelGroupIdx];
+  }
+
+  function cycleLabelGroup(dir) {
+    const list = labelGroups();
+    const cat = setLabelGroup(list[(labelGroupIdx + dir + list.length) % list.length]);
+    const msg = labelGroupText(cat);
+    GG.a11y.announce(msg);
+    toast(msg);
+  }
+
+  function syncCanvasAltLabel() {
+    if (dom.canvas) {
+      dom.canvas.setAttribute('aria-label',
+        GG.i18n.t('紫禁城三维场景', 'Forbidden City 3D scene'));
+    }
+    const alt = document.getElementById('scene-alt');
+    if (alt) {
+      alt.setAttribute('aria-label',
+        GG.i18n.t('画布内容摘要', 'Scene description'));
+    }
+  }
+
+  /** 画布的文本替代：机位尺度 + 可见标注 + 选中建筑，每 120 帧刷新一次 */
+  function updateSceneAlt() {
+    if (fps.active) {
+      GG.a11y.sceneAlt(GG.i18n.t(
+        '第一人称漫游，眼高 1.7 米。WASD 移动、鼠标转头，按 Esc 退出。信息卡在漫游中隐藏。',
+        'Walk mode at eye height 1.7 m. WASD to move, mouse to look, Esc to exit. The info card is hidden while walking.'
+      ));
+      return;
+    }
+    const vis = labels.items.filter((L) => L.visible).map((L) => L.name);
+    const dist = stage.camera.position.distanceTo(orbit.target);
+    const scale = dist > 1200
+      ? GG.i18n.t('远景', 'distant view')
+      : dist > 400 ? GG.i18n.t('中景', 'mid view') : GG.i18n.t('近景', 'close view');
+    const parts = [
+      GG.i18n.t('紫禁城与京师三维场景，' + scale, '3D scene of the Forbidden City and Beijing, ' + scale),
+      GG.i18n.t('可见标注 ' + vis.length + ' 个', vis.length + ' visible labels'),
+      vis.length
+        ? vis.slice(0, 24).join('、')
+        : GG.i18n.t(
+            '当前机位未显示标注，可用左侧宫殿索引浏览全部 ' + ui.items.length + ' 条',
+            'No labels at this distance; use the palace index to browse all ' + ui.items.length + ' entries'
+          )
+    ];
+    if (selected && selected.userData.info) {
+      const info = selected.userData.info;
+      parts.push(GG.i18n.t('已选中 ' + info.name, 'Selected ' + (info.en || info.name)));
+    }
+    GG.a11y.sceneAlt(parts.join(GG.i18n.t('。', '. ')));
+  }
+
+  /* ============================================================
      提示条 / 分享 / 存图
      ============================================================ */
   function toast(msg) {
@@ -144,7 +241,8 @@
     toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
   }
 
-  /** 把当前机位、注视点、选中建筑与日照编码进链接 */
+  /** 把当前机位、注视点、选中建筑、日照与界面状态编码进链接。
+      清单只分享「面板是否打开」，进度按约定不进链接。 */
   function viewLink() {
     const c = stage.camera.position;
     const t = orbit.target;
@@ -155,6 +253,12 @@
     const sl = document.getElementById('sun');
     if (sl) q.set('time', (sl.value / 100).toFixed(2));
     if (GG.i18n.lang === 'en') q.set('lang', 'en');
+    if (GG.weather && GG.weather.name !== 'clear') q.set('weather', GG.weather.name);
+    if (eras && GG.ERAS && eras.id !== GG.ERAS.initial) q.set('era', eras.id);
+    /* 两个面板共用左侧栏位置，同一时刻只开一个；era 优先 */
+    if (quests && quests.isOpen() && !(eras && eras.isOpen())) q.set('quest', '1');
+    const lg = labelGroups()[labelGroupIdx];
+    if (lg) q.set('labelgroup', lg);
     return location.href.split('?')[0] + '?' + q.toString();
   }
 
@@ -419,13 +523,18 @@
 
     GG.i18n.applyStatic();
     syncLangButton();
+    syncLabelGroupBtn();
+    syncCanvasAltLabel();
 
     clock = new THREE.Clock();
     bindEvents(canvas);
     initStats();
     readQuery();
     /* tools/probe.html 依赖这里的引用做拾取 / 规模断言 */
-    window.__dbg = { stage, orbit, registry, GG, THREE, picker, labels, views, ui, quests, eras, fps };
+    window.__dbg = {
+      stage, orbit, registry, GG, THREE, picker, labels, views, ui, quests, eras, fps,
+      viewLink, setLabelGroup, updateSceneAlt
+    };
     animate();
     window.__mark && window.__mark('first-frame-done');
   }
@@ -438,6 +547,8 @@
     if (labels) labels.build(registry);
     if (tour) tour.refresh();
     syncLangButton();
+    syncLabelGroupBtn();
+    syncCanvasAltLabel();
   }
 
   function syncLangButton() {
@@ -453,6 +564,11 @@
      事件绑定
      ============================================================ */
   function bindEvents(canvas) {
+    /* 搜索命中 → 标签高亮。ui.js 每次过滤后派发，这里只做接线 */
+    document.addEventListener('gg:filter', (e) => {
+      if (labels) labels.setMatches(e.detail.names, e.detail.active);
+    });
+
     /* 悬停拾取：只记录坐标，实际射线检测在 animate 里每帧做一次；
        拖拽 / 平移中直接不拾取，转视角不触发高亮 */
     canvas.addEventListener('pointermove', (e) => {
@@ -546,6 +662,7 @@
       const on = e.currentTarget.classList.toggle('active');
       e.currentTarget.setAttribute('aria-pressed', String(on));
     });
+    document.getElementById('btn-label-group').addEventListener('click', () => cycleLabelGroup(1));
 
     /* 探索 / 朝代对比共用左侧栏位置，同一时刻只开一个 */
     document.getElementById('btn-quests').addEventListener('click', () => eras.close());
@@ -604,6 +721,8 @@
 
       if (keyMap[k]) { views.set(keyMap[k]); return; }
       if (k === 'r' || k === 'R') { closeInfo(); views.set('overview'); return; }
+      if (k === '[') { cycleLabelGroup(-1); return; }
+      if (k === ']') { cycleLabelGroup(1); return; }
       if (k === 'h' || k === 'H') {
         const on = document.body.classList.toggle('hide-ui');
         toast(on
@@ -685,9 +804,12 @@
     if (q.get('tour') === '1') setTimeout(() => tour.start(), 800);
     if (q.get('play') === '1') setDayPlay(true);
 
-    if (q.get('quest') === '1') { eras.close(); quests.open(); }
+    const qGroup = q.get('labelgroup');
+    if (qGroup) setLabelGroup(qGroup, true);
+    /* 朝代先落地、清单后展开：两者同现时保留朝代状态、只让清单占左侧栏 */
     const qEra = q.get('era');
     if (qEra === 'ming' || qEra === 'qing') { quests.close(); eras.set(qEra); eras.open(); }
+    if (q.get('quest') === '1') { eras.close(); quests.open(); }
     /* ?fps=1 供自动化与演示：不请求 Pointer Lock，避免无头环境卡住 */
     if (q.get('fps') === '1') setTimeout(() => fps.enter({ noLock: true }), 900);
   }
@@ -762,6 +884,9 @@
       labelFrame++;
       if (labelFrame % C.label.updateEvery === 0) labels.update();
     }
+    /* 画布文本替代：约 2 秒一次，避免反复触发可访问性树重算 */
+    altFrame++;
+    if (altFrame % 120 === 0) updateSceneAlt();
 
     stage.render();
     updateStats(dt);

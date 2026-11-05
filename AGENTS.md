@@ -2,7 +2,7 @@
 
 > 面向接手本项目的 AI 编码代理。先读 [README.md](./README.md)、[docs/architecture.md](docs/architecture.md)、[docs/dev-tooling.md](docs/dev-tooling.md)。
 > 本文件只写“是什么、改哪里、怎么验、哪里会炸”。事实以当前工作区为准；所有计数先跑脚本，不要手抄旧文档。
-> 已打的最新 tag 是 `v2.3`；v2.4（M7 三块玩法 + 五轮场景内容收口）已完成代码与回归，**tag 待打**。
+> 已打的最新 tag 是 `v2.3`；工作区已叠到 v2.5（v2.4 的 M7 三块玩法 + 五轮场景内容收口，v2.5 的实用优先五项），两段 CHANGELOG 都已完成代码与回归，**tag 待打**。
 
 ## 一、项目是什么
 
@@ -14,7 +14,7 @@
 | 打开 `index.html` 即运行 | 需要 `npm install` / 构建链的项目 |
 | 原生 JS + 本地 Three.js r149 | TypeScript、ES Module、打包器 |
 
-当前内容量（`node tools/stats.js`，2026-11-04）：98 条词条，97 条挂载到场景实体（`御花园` 为区域词条），77 块匾额（65 显式 + 六宫 12 自动），13130 行 JS。已打的最新 tag 是 `v2.3`；工作区为 v2.4 内容（京师、三大殿细节、天坛 + M7 探索清单 / 朝代对比 / 第一人称），见 [CHANGELOG.md](./CHANGELOG.md)。
+当前内容量（`node tools/stats.js`，2026-11-04）：98 条词条，97 条挂载到场景实体（`御花园` 为区域词条），77 块匾额（65 显式 + 六宫 12 自动），5 条导览线 / 59 站、6 组清单 / 59 项，引导覆盖 97 / 98，13747 行 JS。已打的最新 tag 是 `v2.3`；工作区为 v2.5 内容（京师、三大殿细节、天坛 + M7 三块玩法 + 实用优先五项），见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 二、运行与版本
 
@@ -47,9 +47,11 @@ js/weather.js            天候预设与雪/雨/落叶粒子
 js/orbit.js              自实现轨道控制器（阻尼、触控、平移）
 js/renderer.js           Stage：renderer、camera、光照、雾、环境贴图、setSun
 js/views.js              从 CONFIG.views 生成按钮与相机飞行
-js/labels.js             标签 DOM、投影、避让、优先级
+js/labels.js             标签 DOM、投影、避让、优先级；分组跳转与命中高亮
 js/picking.js            Raycaster 拾取、悬停高亮、地面光圈
-js/ui.js                 侧栏索引、搜索、已阅、信息卡与互链
+js/search.js             搜索命中纯函数：正文 / 模糊音 / 错字容错 / 四级 score
+js/a11y.js               屏幕阅读器播报与画布文本摘要（sr-only）
+js/ui.js                 侧栏索引、搜索、已阅、信息卡与互链；派发 gg:filter
 js/tour.js               导览播放器（多路线、暂停、字幕）
 js/textures.js           全部 Canvas 程序化贴图缓存、匾额贴图
 js/geo.js                几何原语与静态合批，不碰材质
@@ -57,8 +59,8 @@ js/buildings.js          殿/门/楼/亭/廊/墙工厂与材质单例 MAT
 js/tiantan.js            天坛坛域、坛墙、祈谷坛、圜丘、皇穹宇、斋宫、柏林
 js/city.js               皇城/内城/外城、城门、三海、先农坛、胡同四合院
 js/data/info.js          建筑词条纯数据 GG.INFO
-js/data/tour.js          导览路线纯数据 GG.TOUR
-js/data/quests.js        探索清单纯数据 GG.QUESTS（三组 27 项，只存 info key）
+js/data/tour.js          导览路线纯数据 GG.TOUR（5 线 / 59 站）
+js/data/quests.js        探索清单纯数据 GG.QUESTS（6 组 / 59 项，只存 info key）
 js/data/eras.js          明清差异纯数据 GG.ERAS（8 处，含年代与依据）
 js/quests.js             清单面板、进度判定、一次性完成提示
 js/eras.js               朝代 tab、差异清单、信息卡注记供稿
@@ -76,7 +78,7 @@ tools/                   统计、断言、截图、探针
 ```text
 head:  debug → config → i18n
 body:  three.min.js → sky → water → weather → orbit → renderer
-       → views → labels → picking → ui → tour → textures → geo
+       → views → labels → picking → search → a11y → ui → tour → textures → geo
        → buildings → tiantan → city → data/info → data/tour
        → data/quests → data/eras → quests → eras → fps
        → palace → app
@@ -93,7 +95,7 @@ body:  three.min.js → sky → water → weather → orbit → renderer
 })();
 ```
 
-外部调试入口：`GG.CONFIG`（漫游参数在 `CONFIG.fps`）、`GG.build.MAT`、`GG.getTextures()`、`GG.geo`、`GG.water`、`GG.city`、`GG.tiantan`、`GG.REGISTRY`、`GG.QUESTS`、`GG.ERAS`、`GG.Quests`、`GG.Eras`、`GG.FPS`；`app.js` 在布局完成后挂 `window.__dbg`（`stage` / `orbit` / `registry` / `picker` / `labels` / `views` / `ui` / `quests` / `eras` / `fps` / `GG` / `THREE`）。`window.__mark` / `window.__cap` 只在 `?seed=1` 下存在，用于定位随机数消耗。
+外部调试入口：`GG.CONFIG`（漫游参数在 `CONFIG.fps`、标注分组在 `CONFIG.label.groups`）、`GG.build.MAT`、`GG.getTextures()`、`GG.geo`、`GG.water`、`GG.city`、`GG.tiantan`、`GG.REGISTRY`、`GG.QUESTS`、`GG.ERAS`、`GG.Quests`、`GG.Eras`、`GG.FPS`、`GG.search`、`GG.a11y`；`app.js` 在布局完成后挂 `window.__dbg`（`stage` / `orbit` / `registry` / `picker` / `labels` / `views` / `ui` / `quests` / `eras` / `fps` / `viewLink` / `setLabelGroup` / `updateSceneAlt` / `GG` / `THREE`）。`window.__mark` / `window.__cap` 只在 `?seed=1` 下存在，用于定位随机数消耗。
 
 ## 五、坐标与内容约定
 
@@ -195,7 +197,9 @@ bakeDawnEnvs()
 
 ## 九、性能预算
 
-性能目标：M4 真机 60fps。**60fps 是交接口径，仓库内没有正式帧率基线**（ROADMAP B16 明说未记录），需在真机 Chrome 用 `?stats=1` 当场复测，当前标为待确认。
+性能目标：M4 真机 60fps。**60fps 只是交接口径，实测未达到**：`tools/baseline/fps-v2.4.json` 记录
+`capital` 38.3 / `overview` 41.1 fps（1600×1000、res 1.0、headless ANGLE Metal）。
+用 `node tools/fps-bench.js` 复测，别用 `tools/probe.sh fps`（虚拟时钟）。前台窗口复核仍待人工。
 
 运行时实测（2026-11-03，Apple M4 / ANGLE Metal，`tools/probe.sh`）：
 
@@ -218,14 +222,15 @@ bakeDawnEnvs()
 ### 先跑数据脚本
 
 ```bash
-node tools/stats.js            # 词条 / 挂载 / 匾额 / 代码行数
-node tools/stats.js --json     # 机器可读
+node tools/stats.js            # 词条 / 挂载 / 匾额 / 引导覆盖 / 代码行数
+node tools/stats.js --json     # 机器可读（含 guided 块）
 node tools/stats.js --plaques  # 列出全部显式匾额
-node tools/search-check.js     # 37 条断言：搜索 / 分类 / 年代 / 导览 / rel / 清单 / 朝代
+node tools/search-check.js     # 83 条断言：搜索（含正文/模糊音/错字）/ 分类 / 年代 / 导览 / rel / 清单 / 朝代 / 引导覆盖
 ```
 
 - 改 `js/data/info.js` 或 `palace.js` 的建筑挂载后，跑 `stats.js`；同步 README 状态表，不要手写数字。
-- 改拼音、分类、导览站点或 `rel` 后，跑 `search-check.js`。失败会非零退出。
+- 改拼音、分类、导览站点、清单分组、`rel`、`js/search.js` 后，跑 `search-check.js`。失败会非零退出。
+  搜索断言直接 require `js/search.js`，不要在测试里另写一套命中规则。
 - `stats.js` 靠正则扫 `palace.js` / `city.js` / `tiantan.js` 的 `INFO.<key>`、`key: 'x'`、`mark(group, 'x')`、`marks.push(..., 'x')`。新增挂载写法后要同步脚本，否则会静默漏计。
 
 ### 运行时探针
@@ -238,9 +243,12 @@ tools/probe.sh water    # 水面 ShaderMaterial 与 uniform 自检
 tools/probe.sh city     # GG.city.stats：四合院、连排、胡同数量
 tools/probe.sh fps      # 无头 rAF 帧率；虚拟时钟下不可信，只取 calls/tris
 tools/probe.sh v24      # 27 项：清单 / 朝代 / 第一人称的端到端交互断言
+tools/probe.sh v25      # 27 项：搜索 / 标签分组 / 深链 / 无障碍
+tools/probe.sh deepLink 'q=weather%3Dsnow%26era%3Dming%26quest%3D1%26labelgroup%3D%E4%B8%9C%E8%B7%AF'
+                        # 5 项：URL 状态回读
 ```
 
-探针固定以 `../index.html?nofade=1&seed=1&still=1&view=capital` 载入 iframe；可用 `q=` 透传查询串，例如 `tools/probe.sh stats 'q=view%3Doverview'`。
+探针固定以 `../index.html?nofade=1&seed=1&still=1&view=capital` 载入 iframe；可用 `q=` 透传查询串，例如 `tools/probe.sh stats 'q=view%3Doverview'`。`deepLink` 的 `q=` 里 `&` 必须编码成 `%26`，否则会被外层 URL 拆开。
 
 ### 截图回归
 
@@ -268,7 +276,8 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 
 - `window.__dbg` 在布局完成后可用；`__dbg.stage.renderer.info` 可读 `render.calls` / `render.triangles`。
 - `GG.errors` 收集脚本异常与 `unhandledrejection`；页面顶部出现红色错误浮层时先修它，不要只看加载层。
-- 控制台无报错、`tools/probe.sh pick` 无未命中、`search-check.js` 全绿，是改内容后的最低门槛；改 v2.4 三块交互再补一次 `tools/probe.sh v24`（27 项必须全绿）。
+- 控制台无报错、`tools/probe.sh pick` 无未命中、`search-check.js` 全绿，是改内容后的最低门槛；
+  改 v2.4 三块交互补 `tools/probe.sh v24`（27 项），改搜索 / 标注 / 深链 / 无障碍补 `tools/probe.sh v25`（27 项）与 `deepLink`（5 项），全部必须全绿。
 
 ## 十一、易踩的坑
 
@@ -293,13 +302,16 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 | 用射线做「抬头看匾」 | 平视时射线从台基侧面穿过去，打不到高处匾额。改前方最近建筑 + 方位角 + 仰角的几何判定 |
 | 一次排多张重机位截图 | 命令被系统终止、一张都没出。拆成单张跑，降 `BUDGET`，界面自查可 `CHECK=0` |
 | 让 `orbit` 与 `fps` 同时写相机 | 两者互相抢 `lookAt`，表现为视角乱跳。`orbit.enabled` 是唯一开关 |
+| 在断言脚本里另写一套搜索匹配 | 规则漂移，测试全绿但界面搜不到。只用 `GG.search.match` |
+| 搜索结果重排后不重建 `ui.items` | 「上一座 / 下一座」按旧顺序走。重排是搬 DOM 节点，必须同步映射 |
+| 分组时只隐藏标签、不改 `tabIndex` | 屏幕阅读器与键盘仍会 Tab 到看不见的标签 |
 
 ## 十二、代码风格
 
 - 2 空格缩进，语句结尾加分号；`const` / `let`，不用 `var`。
 - 注释写“为什么”，不写“是什么”。现状注释已大量解释取舍，改动时保留有用的“为什么”。
 - **删除死代码，避免冗余**：改完顺手清掉不再引用的函数、变量、CSS 与注释；不要留“以后可能用”的分支。
-- 单一数据源：机位进 `CONFIG.views`，配置进 `CONFIG`（漫游参数进 `CONFIG.fps`），词条进 `info.js`，路线进 `tour.js`，清单进 `quests.js`，朝代差异进 `eras.js`，材质进 `MAT`，贴图进 `getTextures()`，已阅进度只认 `ui.visited`。不要在第二个地方复制一份。
+- 单一数据源：机位进 `CONFIG.views`，配置进 `CONFIG`（漫游参数进 `CONFIG.fps`、标注分组进 `CONFIG.label.groups`），词条进 `info.js`，路线进 `tour.js`，清单进 `quests.js`，朝代差异进 `eras.js`，搜索命中进 `search.js`，材质进 `MAT`，贴图进 `getTextures()`，已阅进度只认 `ui.visited`。不要在第二个地方复制一份。
 - 新界面文案必须双语：静态节点写 `data-zh` / `data-en`（标题类再加 `data-title-zh` / `data-title-en`），JS 用 `GG.i18n.t(zh, en)`；新增控件补 `aria-label` / `aria-pressed`，并同步 `docs/accessibility.md`。
 - 不引入 UI 框架、CSS 预处理器、构建链或第二份 Three.js；优先用现有 `GG.geo` / `GG.build` / `MAT` / `InstancedMesh`。
 - 改渲染相关代码，按 [docs/dev-tooling.md](docs/dev-tooling.md) 跑截图回归；改内容数据，跑 `search-check.js` 与 `stats.js`。
@@ -308,10 +320,17 @@ http://localhost:8931/?nofade=1         # 隐藏加载层，截图专用
 
 以下为仍未闭合的口径；已校准项见 README 与 docs/architecture.md。
 
-- **60fps**：交接口径，仓库没有正式帧率记录（ROADMAP B16）；需真机 `?stats=1` 复测。
-- **2830 draw call / 2.97 M 三角形**：与当前 HEAD 实测（`capital` 3146 / 3.53 M，`overview` 2731 / 3.33 M）不符；来源机位待确认。
-- **截图基线**：`tools/baseline` 只有 v0.9 / v1.2 / v2.1；v2.2 未归档，v2.3+ 没有完整基线。
-- **版本号**：已打的最新 tag 是 `v2.3`；工作区是 v2.4 内容（M7 三块玩法 + 五轮场景内容收口），**tag 待打**。以 CHANGELOG 的 v2.4 条目为准。
-- **M7 人工验收**：5 分钟可用性测试与基准帧率（B16）未做，分别需要真人与真机 `?stats=1`；见 ROADMAP 第二节。自动化部分（37 条纯数据断言 + 27 项交互探针）已全绿。
+- **帧率**：`tools/baseline/fps-v2.4.json` 已记录工程基线（`capital` 38.3 / `overview` 41.1 fps，
+  1600×1000、res 1.0、`still=1`、headless ANGLE Metal、M4 / Chrome 156）。`node tools/fps-bench.js` 可复现。
+  60fps 只是交接口径，没有达到；**前台窗口复核（A5）仍未做**，T7.3 前后对照因开工前未测无法追溯。
+  不要拿 `tools/probe.sh fps` 的 fps 数字当基线（虚拟时钟），详见 `docs/dev-tooling.md` 第九节。
+- **2830 draw call / 2.97 M 三角形**：与当前实测（`capital` 3146 / 3.55 M，`overview` 2731 / 3.33 M）不符；来源机位待确认。
+- **截图基线**：`v0.9` / `v1.2` / `v2.1`（SwiftShader）与 **`v2.4` 十张完整**（Metal + `still=1`）并存；
+  `v2.2` 只有 1 张自查图、`v2.3` 未归档。两套后端不能逐像素比。
+  v2.5 工具条新增「标注 · 全部」按钮，`v2.4` 十张的界面区域已不再逐像素可比（B24），`v2.5` 基线待生成。
+- **版本号**：已打的最新 tag 是 `v2.3`；工作区是 v2.5 内容（v2.4 的 M7 + 五轮场景内容收口 + v2.5 实用优先五项），
+  **tag 待打**。以 CHANGELOG 的 v2.4 / v2.5 两条为准，发版时一次打 `v2.5`。
+- **M7 人工动作**：5 分钟可用性测试（A1）与前台窗口帧率复核（A5）未做；A2 / A3 基线已补齐，见 ROADMAP 第二节。
+  自动化部分（83 条纯函数 / 数据断言 + `v24` 27 项 + `v25` 27 项 + `deepLink` 5 项 + `pick` 101 条）已全绿。
 
 CHANGELOG 的历史条目仍保留当时的 1928 / 8364 / 577 与 1600+ 行，是版本记录，不是现状；引用现状以 README、`tools/probe.sh city` 与 `node tools/stats.js` 为准。

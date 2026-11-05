@@ -64,6 +64,62 @@
           en: 'All five garden vignettes visited'
         },
         items: ['duixiushan', 'wanchunting', 'qianqiuting', 'qinandian', 'jiaolou']
+      },
+
+      /* v2.5：把导览之外的散点按空间分组接住。
+         区域词条「御花园」没有实体，不进清单——点开会是空卡。 */
+      {
+        id: 'wings',
+        title: { zh: '两翼与内廷门殿', en: 'Wings & Inner Gates' },
+        short: { zh: '两翼', en: 'Wings' },
+        hint: {
+          zh: '三大殿两翼的崇楼，以及后三宫之间的门户与小殿。',
+          en: 'The flanking towers of the three great halls, and the small gates and halls of the Inner Court.'
+        },
+        done: {
+          zh: '两翼与内廷门殿都到过了',
+          en: 'All the wings and inner gates visited'
+        },
+        items: [
+          'tirenge', 'hongyige', 'xiehemen', 'xihemen',
+          'kunningmen', 'jingyunmen', 'longzongmen', 'zhaorendian', 'hongdedian'
+        ]
+      },
+      {
+        id: 'gates',
+        title: { zh: '宫门与内城九门', en: 'Palace & City Gates' },
+        short: { zh: '城门', en: 'Gates' },
+        hint: {
+          zh: '从宫城东西门，走到内城九门，看方位与用途各有不同。',
+          en: 'From the palace side gates to the nine gates of the Inner City, each with its own direction and use.'
+        },
+        done: {
+          zh: '十一座城门都到过了',
+          en: 'All eleven gates visited'
+        },
+        items: [
+          'donghuamen', 'xihuamen',
+          'zhengyangmen', 'chongwenmen', 'xuanwumen', 'chaoyangmen', 'fuchengmen',
+          'dongzhimen', 'xizhimen', 'andingmen', 'deshengmen'
+        ]
+      },
+      {
+        id: 'outliers',
+        title: { zh: '散点拾遗', en: 'Outlying Corners' },
+        short: { zh: '拾遗', en: 'Corners' },
+        hint: {
+          zh: '外城偏门、斋宫，还有几处容易错过的院落与书斋。',
+          en: 'Outer-city side gates, the fasting palace, and a few easily missed courtyards and studies.'
+        },
+        done: {
+          zh: '散点都看过了',
+          en: 'All the outlying corners visited'
+        },
+        items: [
+          'zhaigong', 'yongdingmen', 'dianmen', 'donganmen', 'xianmen',
+          'zuoanmen', 'youanmen', 'guangqumen', 'guanganmen',
+          'zhuijingdian', 'shangsiyuan', 'juanqinzhai'
+        ]
       }
     ]
   };

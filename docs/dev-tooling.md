@@ -1,6 +1,6 @@
 # 开发工具与截图回归
 
-> 适用版本：v2.4。只讲“怎么验”，不讲架构与产品。
+> 适用版本：v2.5。只讲“怎么验”，不讲架构与产品。
 > 架构见 [architecture.md](architecture.md)。
 
 ---
@@ -177,9 +177,10 @@ pillow 不进项目依赖，用临时虚拟环境即可。
 | `v1.2` | 9 | 完整 |
 | `v2.0` | — | 未归档。当时只出了 2 张（`axis` / `taihe`），不足以做回归，已移出仓库；需要时按下面的 `worktree` 方式从 tag 重建 |
 | `v2.1` | 7 | 缺 `overview` / `close`；作为 v2.2 的对比基准时缺两张 |
-| `v2.2` | 0 | **待生成**。v2.2 改了时间轴与阴影模式，v2.1 的图与新代码不再可比 |
+| `v2.2` | 1 | 只有 `taihe.png`（2026-11-03 单张自查），**不构成完整基线**。v2.2 改了时间轴与阴影模式，v2.1 的图与新代码不再可比 |
 | `v2.3` | 0 | 未生成 |
-| `v2.4` | 0 | 未生成。只有 `quests` / `eras` / `fps` 三张 Metal 后端界面自查图（临时目录，未入库），不构成回归基线 |
+| `v2.4` | **10** | **完整**。Metal 后端，统一 `seed=1`、`nofade=1`、`still=1`、`time=noon`、`BUDGET=4000`；`CHECK=1` 预检通过，十张全部 >1.2 MB。与 SwiftShader 旧基线不可逐像素比 |
+| `v2.5` | 0 | 未归档。v2.5 只改界面与数据，工具条新增「标注 · 全部」按钮让 `v2.4` 十张的**界面区域**不再逐像素可比（B24）；渲染区域仍是有效参考。需要对照时按同样口径生成 `tools/baseline/v2.5` |
 
 > **重要**：v2.2 把 `t` 的语义从“日出到日落”改成“深夜到深夜”，同一 `?time=0.5` 仍是正午，但 `time=0.9` 从“接近日落”变成“入夜”。跨 v2.1 / v2.2 对比截图时必须显式写 `time=noon`，不要用默认值碰运气。
 >
@@ -216,6 +217,8 @@ node tools/stats.js --plaques  # 列出全部显式匾额
 ```
 
 改了 `info.js` 或 `palace.js` 的建筑挂载后跑一次，再同步 README 的“当前状态”表。这是防止文档数字再次漂移的唯一手段。
+`--json` 里的 `guided` 块（v2.5 起）统计导览路线 / 站点、清单组 / 条目、被点名词条数与未点名列表，
+数据来自 `js/data/tour.js` / `quests.js` / `eras.js`，README 的「引导覆盖」一行只从这里取。
 
 搜索与导览的数据规则用另一个脚本兜底：
 
@@ -223,18 +226,20 @@ node tools/stats.js --plaques  # 列出全部显式匾额
 node tools/search-check.js
 ```
 
-37 条断言，覆盖：
+**83 条断言**，覆盖：
 
-- 拼音命中（`taihe` / `thd` / 中文）
-- 分类过滤六个分类的条数
-- 年代过滤（明 / 清）
-- 关键词 + 分类 + 年代的组合条件
-- 两条导览线的站点是否都有对应词条、字幕是否齐全
+- 拼音命中（`taihe` / `thd` / 中文）、分类与年代过滤、组合条件
+- **搜索增强**（v2.5）：正文检索、模糊音归一等价类（`zh`≡`z`、`n`≡`l`、`in`≡`ing`）、
+  中文错字 / 拼音漏字 / 相邻字母换位、命中四级 score、无意义串不误命中
+- 五条导览线：站名都有词条、双语字幕、站数 8–16、只走有实体的词条（区域词条会被拦）
 - `py` / `pyi` 是否补齐、`rel` 引用是否悬空
-- **探索清单**：组 id 唯一、10/12/5 的条目数、info key 不悬空不跨组重复、双语字段齐全、`Quests.progress` 的边界行为
+- **探索清单**：组 id 唯一、第一组 10 项、每组 5–15 项、info key 不悬空不重复且有实体、双语齐全、`Quests.progress` 边界
 - **朝代对比**：`initial` 合法、差异条目都有词条 / 年代 / 双语说明 / 依据、按词条名不重复、明清两种说明不同
+- **引导覆盖**：除无实体的区域词条外，全部词条被导览 / 清单 / 朝代点名
 
-改 `info.js` 的拼音、`tour.js` 的站点、`data/quests.js` 或 `data/eras.js` 后必跑。失败会以非零码退出，可以挂进提交前检查。
+搜索断言直接 `require('../js/search.js')`，与 `ui.js` 用的是同一份 `GG.search.match`，**不要在测试里另写一套匹配逻辑**。
+改 `info.js` 的拼音、`data/tour.js` 的站点、`data/quests.js` / `data/eras.js` 或 `js/search.js` 后必跑。
+失败会以非零码退出，可以挂进提交前检查。
 
 ---
 
@@ -250,17 +255,25 @@ tools/probe.sh stats    # mesh / 实例 / 三角形 / draw call 总量
 tools/probe.sh water    # 水面材质自检：新版着色器是否加载、uniform 是否被写入
 tools/probe.sh city     # GG.city.stats：四合院与街巷规模
 tools/probe.sh v24      # 探索清单 / 朝代对比 / 第一人称的 27 项端到端断言
+tools/probe.sh v25      # 搜索 / 标签分组 / 深链 / 无障碍的 27 项断言
+tools/probe.sh deepLink "q=weather%3Dsnow%26era%3Dming%26quest%3D1%26labelgroup%3D%E4%B8%9C%E8%B7%AF"
+                        # 第二个参数透传给 iframe，验证 URL 状态回读（5 项）
 ```
 
 `v24` 走真实 DOM：点清单条目验证「已阅 → 勾选 → 一次性完成提示 → 可关闭」、
 切朝代验证面板文案与信息卡差异注记、进漫游验证碰撞盒 / 位移 / 抬头看匾 / 退出后的 orbit 反算，
 最后检查 `GG.errors` 为空。改这三块交互后先跑它，比截图更能证明「点得到」。
 
+`v25` 用 `input` 事件驱动真实搜索框，验证正文 / 模糊音 / 错字命中、四级排序、零结果播报、
+命中标签高亮与 `tabIndex` 分组；再调 `__dbg.viewLink()` 检查深链参数，最后验证 sr-only 摘要。
+`deepLink` 的 `q=` 值必须把 `&` 编码成 `%26`、`=` 编码成 `%3D`，否则会被 `probe.sh` 拆成外层查询参数。
+
 `pick` 用的是页面自己的 `picker.pickAt`，与真实点击同一条路径；相机被搬到每个建筑
 斜上方 3.2 倍半径处，避免远景射线被前景挡住造成的假阴性。
 
-**为什么不用 headless 的 rAF 测帧率**：虚拟时钟下 `requestAnimationFrame` 与
-`performance.now()` 对不上，采样不出有效数字。帧率只能在真机窗口里用 `?stats=1` 读。
+**为什么探针里不测帧率**：探针依赖 `--virtual-time-budget`，虚拟时钟下 `requestAnimationFrame`
+与 `performance.now()` 一起被加速，读数没有意义。帧率请用第九节的 `tools/fps-bench.js`
+（CDP 连真实运行的 Chrome，按墙钟采样），不要用 `tools/probe.sh fps` 的 fps 数字。
 
 **探针必须在结束时掐掉 iframe 的 rAF**。`--virtual-time-budget` 只在页面空闲时才推进
 虚拟时钟，而主循环每帧吃掉 16 ms 虚拟时间；场景变重之后一帧要几十毫秒，预算迟迟用不完，
@@ -268,6 +281,39 @@ tools/probe.sh v24      # 探索清单 / 朝代对比 / 第一人称的 27 项�
 里把 `requestAnimationFrame` 换成立即返回的空函数，时钟立刻走完，一次探针从 100 s 降到 3 s。
 
 `window.__dbg` 由 `app.js` 在布局完成后挂出（`stage` / `orbit` / `registry` / `picker` /
-`labels` / `views` / `ui` / `GG` / `THREE`），只在调试时使用，不参与渲染。
+`labels` / `views` / `ui` / `quests` / `eras` / `fps` / `viewLink` / `setLabelGroup` /
+`updateSceneAlt` / `GG` / `THREE`），只在调试时使用，不参与渲染。
+
+---
+
+## 九、帧率基线（B16 / A2）
+
+```bash
+node tools/fps-bench.js                              # 可复现的工程基线（headless + Metal）
+WINDOWED=1 VIEWS=capital node tools/fps-bench.js    # 可见窗口前台复核，单视图更稳
+```
+
+脚本用 CDP `Runtime.evaluate` 在页面内按**真实墙钟**采样 6 秒 rAF，不使用 `--virtual-time-budget`。
+固定口径：ANGLE Metal、viewport 1600×1000 / dpr 1（CDP 强制，避免可见窗口被系统栏挤小）、
+`seed=1&nofade=1&time=noon&still=1`、`resolutionScale=1.0`（`still=1` 同时冻结动态分辨率），
+每个机位预热 1.8 s 后采样。>200 ms 的间隔视为窗口挂起并剔除，避免把系统调度误记成渲染变慢。
+
+**当前基线**（`tools/baseline/fps-v2.4.json`，Apple M4 / Chrome 156 / 2026-11-04）：
+
+| 机位 | fps | 平均帧时 | p90 | 最差 10% | draw call | 三角形 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `capital` | 38.3 | 26.10 ms | 33.4 ms | 29.9 fps | 3146 | 3,548,101 |
+| `overview` | 41.1 | 24.33 ms | 33.4 ms | 28.8 fps | 2731 | 3,331,134 |
+
+- 这是 **headless Chrome + ANGLE Metal** 的读数，用于同环境、同参数的前后对照，
+  不是前台窗口里用户看到的帧率。前台复核用 `WINDOWED=1`；一次成功的前台采样
+  （capital 38.3 / overview 41.3 fps）与上表吻合，但可见窗口在本环境会被系统回收，
+  连续运行经常失败，单视图分别跑更稳。
+- rAF 被 vsync 量化到约 16.7 / 33.3 ms，`p50` 常在 33.3、`p90` 33.4，属正常现象。
+- **B16 原判据无法追溯**：ROADMAP 原写「T7.3 开工前记录、完成后同机位复测，降幅 ≤15%」，
+  开工前那次没测。这份是 v2.4 完成后的基线，用于后续版本对照；不要拿 `v2.3` tag 的帧率跟它比
+  ——两者相差五轮场景内容，差异无法归因给 T7.3。
+- 改渲染 / 布局后重跑脚本，比较 `fps` 与 `calls` / `tris`；出现数百 draw call 或数十万三角形回退，
+  按 AGENTS 第九节的性能预算处理。
 
 ---

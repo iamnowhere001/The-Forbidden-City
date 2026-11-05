@@ -78,6 +78,30 @@ const fields = ['form', 'scale', 'status', 'note'];
 const coverage = {};
 for (const f of fields) coverage[f] = infoKeys.filter((k) => INFO[k][f]).length;
 
+/* ---------- 4b. 引导覆盖（v2.5） ----------
+   被导览站 / 清单条目 / 朝代差异点名的词条，去重后按 name 计。
+   区域词条（御花园）没有场景实体，本来就不该被点名，不算缺口。 */
+require(path.join(ROOT, 'js/data/tour.js'));
+require(path.join(ROOT, 'js/data/quests.js'));
+require(path.join(ROOT, 'js/data/eras.js'));
+const guidedNames = new Set();
+const tourRoutes = window.GG.TOUR.routes;
+for (const r of tourRoutes) for (const s of r.stops) guidedNames.add(s.target);
+const questGroups = window.GG.QUESTS.groups;
+for (const g of questGroups) {
+  for (const k of g.items) if (INFO[k]) guidedNames.add(INFO[k].name);
+}
+for (const c of window.GG.ERAS.changes) if (INFO[c.key]) guidedNames.add(INFO[c.key].name);
+const guided = {
+  routes: tourRoutes.length,
+  stops: tourRoutes.reduce((n, r) => n + r.stops.length, 0),
+  groups: questGroups.length,
+  items: questGroups.reduce((n, g) => n + g.items.length, 0),
+  named: infoKeys.filter((k) => guidedNames.has(INFO[k].name)).length,
+  total: infoKeys.length,
+  unguided: infoKeys.filter((k) => !guidedNames.has(INFO[k].name))
+};
+
 /* ---------- 5. 代码规模 ---------- */
 function countLines(dir, out = { total: 0, files: [] }) {
   for (const name of fs.readdirSync(path.join(ROOT, dir))) {
@@ -112,6 +136,7 @@ const data = {
   },
   byCat,
   coverage,
+  guided,
   code: { totalLines: js.total, largest: js.files.slice(0, 3) }
 };
 
@@ -134,6 +159,9 @@ if (process.argv.includes('--json')) {
 | 匾额合计 | ${data.plaques.total} |
 | 分类分布 | ${catLine} |
 | 字段覆盖 | ${covLine} |
+| 导览路线 / 站点 | ${guided.routes} 条 / ${guided.stops} 站 |
+| 探索清单 / 条目 | ${guided.groups} 组 / ${guided.items} 项 |
+| 被引导点名词条 | ${guided.named} / ${guided.total}（未点名：${guided.unguided.join('、') || '无'}） |
 | JS 总行数 | ${data.code.totalLines} |
 | 最大文件 | ${data.code.largest.map(([f, n]) => `${f} ${n}`).join(' / ')} |
 

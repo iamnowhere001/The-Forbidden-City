@@ -64,8 +64,11 @@ const CASES = {
     d.quests.open();
     const groups = doc.querySelectorAll('#quests .q-group');
     const items = doc.querySelectorAll('#quests .q-item');
-    ck('清单三组', groups.length === 3, 'groups=' + groups.length);
-    ck('清单 27 项', items.length === 27, 'items=' + items.length);
+    const expectItems = w.GG.QUESTS.groups.reduce((n, g) => n + g.items.length, 0);
+    ck('清单组数与数据一致', groups.length === w.GG.QUESTS.groups.length,
+      'groups=' + groups.length);
+    ck('清单项数与数据一致', items.length === expectItems,
+      'items=' + items.length + ' / ' + expectItems);
     ck('面板打开', d.quests.isOpen() && doc.body.classList.contains('quests-on'));
     const first = doc.querySelector('#quests .q-item');
     const firstName = w.GG.INFO[first.dataset.key].name;
@@ -140,6 +143,109 @@ const CASES = {
     ck('退出后相机抬高到合理高度', d.stage.camera.position.y > 1.7);
     ck('无脚本异常', (w.GG.errors || []).length === 0, (w.GG.errors || []).join(' | '));
     log('V24 结果：' + pass + ' 通过 / ' + fail + ' 失败');
+  },
+
+  /* v2.5 实用优先：搜索增强 / 标签分组 / 深链 / 无障碍 */
+  async v25(w) {
+    const d = w.__dbg, doc = w.document;
+    let pass = 0, fail = 0;
+    const ck = (name, cond, extra) => {
+      cond ? pass++ : fail++;
+      log((cond ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : ''));
+    };
+    const search = doc.getElementById('search');
+    const query = (s) => {
+      search.value = s;
+      search.dispatchEvent(new w.Event('input', { bubbles: true }));
+    };
+    const shown = () => [...doc.querySelectorAll('#list .li:not(.hidden)')];
+    const visible = () => shown().map((x) => x.dataset.name);
+
+    /* ---- 搜索：正文 / 模糊音 / 错字容错 / 分级排序 ---- */
+    query('四库全书');
+    const siku = visible();
+    ck('正文检索命中藏书与修书词条',
+      ['文渊阁', '文华殿', '武英殿'].every((n) => siku.includes(n)), siku.join(','));
+    query('zonghedian');
+    ck('模糊音命中中和殿', visible().includes('中和殿'));
+    ck('模糊命中带 .fuzzy 标记', shown().some((x) => x.classList.contains('fuzzy')));
+    query('太和店');
+    ck('错字容错命中太和殿', visible().includes('太和殿'));
+    query('太和');
+    const first = doc.querySelector('#list .li:not(.hidden)');
+    ck('精确命中排在正文命中之前',
+      !!first && ['太和门', '太和殿'].includes(first.dataset.name),
+      first && first.dataset.name);
+    query('xyzxyz');
+    ck('无意义串零结果', visible().length === 0);
+    ck('零结果可见提示', !doc.getElementById('no-result').hidden);
+    ck('零结果 aria-live 播报',
+      /找到 0 条/.test(doc.getElementById('search-status').textContent),
+      doc.getElementById('search-status').textContent);
+    query('太和殿');
+    ck('搜索命中传给标签层', d.labels.matchActive && d.labels.matches.has('太和殿'));
+    d.labels.update();
+    ck('命中标签有 is-match', doc.querySelectorAll('#labels .lbl.is-match').length > 0);
+    query('');
+    ck('清空搜索恢复全部', visible().length === d.ui.items.length,
+      visible().length + ' / ' + d.ui.items.length);
+    ck('清空后标签高亮解除', !d.labels.matchActive);
+
+    /* ---- 标签分组：键盘不再逐个 Tab 走完全部标签 ---- */
+    d.setLabelGroup('前朝');
+    ck('分组切换到前朝', d.labels.group === '前朝');
+    ck('非本组标签移出 Tab 顺序',
+      d.labels.items.filter((L) => L.cat !== '前朝').every((L) => L.el.tabIndex === -1));
+    ck('本组标签仍在 Tab 顺序',
+      d.labels.items.filter((L) => L.cat === '前朝').every((L) => L.el.tabIndex === 0));
+    ck('分组按钮文字同步',
+      doc.getElementById('btn-label-group').textContent.includes('前朝'));
+    w.dispatchEvent(new w.KeyboardEvent('keydown', { key: ']', bubbles: true }));
+    ck('] 键切到下一组', d.labels.group === '后寝', d.labels.group);
+    w.dispatchEvent(new w.KeyboardEvent('keydown', { key: '[', bubbles: true }));
+    ck('[ 键切回上一组', d.labels.group === '前朝', d.labels.group);
+
+    /* ---- 深链：天气 / 朝代 / 清单 / 标注分组 ---- */
+    w.GG.weather.apply('snow', d.stage);
+    d.eras.set('ming');
+    d.quests.open();
+    const url = new w.URL(d.viewLink());
+    ck('链接带 weather', url.searchParams.get('weather') === 'snow');
+    ck('链接带 era', url.searchParams.get('era') === 'ming');
+    ck('链接带 quest', url.searchParams.get('quest') === '1');
+    ck('链接带 labelgroup', url.searchParams.get('labelgroup') === '前朝');
+    ck('链接仍带机位与时刻',
+      !!url.searchParams.get('pos') && !!url.searchParams.get('time'));
+    d.quests.close(); d.eras.set('qing'); w.GG.weather.apply('clear', d.stage);
+
+    /* ---- 无障碍：播报 / 画布文本替代 ---- */
+    w.GG.a11y.announce('测试播报');
+    ck('状态播报写入 aria-live',
+      doc.getElementById('a11y-status').textContent === '测试播报');
+    d.updateSceneAlt();
+    const alt = doc.getElementById('scene-alt');
+    ck('画布摘要含可见标注数', /可见标注/.test(alt.textContent),
+      alt.textContent.slice(0, 60));
+    ck('canvas 关联到摘要',
+      doc.getElementById('scene').getAttribute('aria-describedby') === 'scene-alt');
+    ck('无脚本异常', (w.GG.errors || []).length === 0, (w.GG.errors || []).join(' | '));
+    log('V25 结果：' + pass + ' 通过 / ' + fail + ' 失败');
+  },
+
+  /* 深链回读：tools/probe.sh deepLink "q=weather=snow&era=ming&quest=1&labelgroup=..." */
+  async deepLink(w) {
+    const d = w.__dbg;
+    let pass = 0, fail = 0;
+    const ck = (name, cond, extra) => {
+      cond ? pass++ : fail++;
+      log((cond ? '  ok   ' : '  FAIL ') + name + (extra ? '  ' + extra : ''));
+    };
+    ck('天气从 URL 还原', w.GG.weather.name === 'snow', w.GG.weather.name);
+    ck('朝代从 URL 还原', d.eras.id === 'ming', d.eras.id);
+    ck('清单从 URL 打开', d.quests.isOpen());
+    ck('标注分组从 URL 还原', d.labels.group === '东路', d.labels.group);
+    ck('无脚本异常', (w.GG.errors || []).length === 0, (w.GG.errors || []).join(' | '));
+    log('DEEPLINK 结果：' + pass + ' 通过 / ' + fail + ' 失败');
   },
 
   /* 当前机位：核对 ?pos/?tgt 是否被启动流程改写 */

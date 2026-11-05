@@ -123,7 +123,9 @@
       opacityMin: 0.35,
       opacityMax: 0.92,
       rectTopPad: 6,
-      updateEvery: 2
+      updateEvery: 2,
+      /* 标注分组跳转的循环顺序，空串 = 全部；按钮 / 键位 / URL 都从这里推导 */
+      groups: ['', '前朝', '后寝', '东路', '西路', '城防', '宫外']
     },
 
     /* ---------- 轨道控制器 ---------- */

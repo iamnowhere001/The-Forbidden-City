@@ -12,8 +12,12 @@
 </head>
 <body>
 
-<canvas id="scene"></canvas>
+<canvas id="scene" aria-describedby="scene-alt"></canvas>
 <div id="labels"></div>
+
+<!-- 屏幕阅读器专用：状态播报 + 画布内容摘要。视觉上不占画面 -->
+<div id="a11y-status" class="sr-only" role="status" aria-live="polite"></div>
+<div id="scene-alt" class="sr-only" role="region" aria-label="画布内容摘要"></div>
 
 <!-- 窄屏侧栏抽屉的遮罩；点击关闭（宽屏下不渲染） -->
 <div id="scrim" hidden></div>
@@ -37,6 +41,7 @@
   </div>
   <div id="search-wrap">
     <input id="search" type="search" autocomplete="off" placeholder="搜索宫殿" aria-label="搜索宫殿">
+    <div id="search-status" class="sr-only" role="status" aria-live="polite"></div>
     <div id="filters">
       <select id="filter-cat" aria-label="按分类过滤">
         <option value="" data-zh="全部分类" data-en="All areas">全部分类</option>
@@ -65,6 +70,8 @@
 <div id="tools">
   <button class="tool" id="panel-toggle" title="收起索引" aria-label="收起索引" data-title-zh="收起索引" data-title-en="Hide index">☰</button>
   <button class="tool" id="btn-labels" title="显示全部标注" aria-label="显示全部标注" data-title-zh="显示全部标注" data-title-en="Show all labels" data-zh="标注" data-en="Labels">标注</button>
+  <!-- 文字与 aria-label 由 app.js 按当前分组动态写，不走 data-* -->
+  <button class="tool" id="btn-label-group" title="标注分组" aria-label="标注分组" aria-pressed="false"></button>
   <button class="tool" id="btn-rotate" title="自动旋转" aria-label="自动旋转" data-title-zh="自动旋转" data-title-en="Auto-rotate" data-zh="旋转" data-en="Rotate">旋转</button>
   <div class="sep"></div>
   <div id="time" title="拖动改变日照时刻">
@@ -213,6 +220,8 @@
 <script src="js/views.js"></script>
 <script src="js/labels.js"></script>
 <script src="js/picking.js"></script>
+<script src="js/search.js"></script>
+<script src="js/a11y.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/tour.js"></script>
 <script src="js/textures.js"></script>

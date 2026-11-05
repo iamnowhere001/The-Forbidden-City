@@ -1,0 +1,62 @@
+{
+  "version": "v2.4",
+  "capturedAt": "2026-11-04T13:31:00.318Z",
+  "method": "CDP Runtime.evaluate + 页面内 rAF 真实墙钟采样（无 virtual-time-budget）",
+  "environment": {
+    "browser": "Chrome/156.0.8078.80",
+    "backend": "ANGLE Metal",
+    "headless": true,
+    "window": "headless=new",
+    "viewport": "1600x1000",
+    "deviceScaleFactor": 1,
+    "cpu": "Apple M4",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "query": "seed=1&nofade=1&time=noon&still=1",
+  "resolutionScale": 1,
+  "sampleMs": 6000,
+  "warmupMs": 1800,
+  "caveat": "headless 真实墙钟采样，rAF 被 vsync 量化（约 16.7 / 33.3 ms），只用于同环境前后对照；不等同于前台窗口的用户可见帧率。",
+  "views": {
+    "capital": {
+      "frames": 231,
+      "pauses": 0,
+      "maxPauseMs": 0,
+      "avgMs": 26.1,
+      "fps": 38.3,
+      "p50Ms": 33.3,
+      "p90Ms": 33.4,
+      "worst10Fps": 29.9,
+      "maxMs": 33.4,
+      "capturedAt": "2026-11-04T13:30:52.341Z",
+      "calls": 3146,
+      "tris": 3548101,
+      "resStart": 1,
+      "resEnd": 1,
+      "width": 1600,
+      "height": 1000,
+      "dpr": 1,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+    },
+    "overview": {
+      "frames": 247,
+      "pauses": 0,
+      "maxPauseMs": 0,
+      "avgMs": 24.33,
+      "fps": 41.1,
+      "p50Ms": 16.7,
+      "p90Ms": 33.4,
+      "worst10Fps": 28.8,
+      "maxMs": 66.7,
+      "capturedAt": "2026-11-04T13:31:00.304Z",
+      "calls": 2731,
+      "tris": 3331134,
+      "resStart": 1,
+      "resEnd": 1,
+      "width": 1600,
+      "height": 1000,
+      "dpr": 1,
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+    }
+  }
+}

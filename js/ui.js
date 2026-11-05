@@ -33,6 +33,7 @@
     this.eraNoteFn = opts.eraNote || null;
     this.items = [];                   // 与侧栏顺序一致的建筑组
     this.byName = new Map();
+    this.byNameInfo = new Map();       // name → 完整词条（正文检索用）
     this.registry = [];
     this.current = null;
     this.query = '';
@@ -45,6 +46,7 @@
     this.eraEl = document.getElementById('filter-era');
     this.noResultEl = document.getElementById('no-result');
     this.countEl = document.getElementById('read-count');
+    this.statusEl = document.getElementById('search-status');
 
     if (this.searchEl) {
       this.searchEl.addEventListener('input', () => {
@@ -113,10 +115,18 @@
     this.listEl.innerHTML = html;
 
     this.byName.clear();
+    this.byNameInfo.clear();
     for (const g of registry) {
       const info = g.userData.info;
-      if (info && info.name && !this.byName.has(info.name)) this.byName.set(info.name, g);
+      if (!info || !info.name || this.byName.has(info.name)) continue;
+      this.byName.set(info.name, g);
+      this.byNameInfo.set(info.name, info);
     }
+    /* 正文检索需要完整词条，不能只靠 dataset 那几个字段。
+       挂在元素上而不是写进 HTML，语言切换重建时会一并换掉。 */
+    [...this.listEl.querySelectorAll('.li')].forEach((li) => {
+      li.__info = this.byNameInfo.get(li.dataset.name);
+    });
     this.items = [...this.listEl.querySelectorAll('.li')]
       .map((li) => this.byName.get(li.dataset.name))
       .filter(Boolean);
@@ -136,31 +146,33 @@
     });
 
     if (this.searchEl) {
-      this.searchEl.placeholder = GG.i18n.t('搜索宫殿 / 拼音', 'Search name or pinyin');
-      this.searchEl.setAttribute('aria-label', GG.i18n.t('搜索宫殿 / 拼音', 'Search name or pinyin'));
+      const ph = GG.i18n.t('搜索名称 / 拼音 / 正文', 'Search name, pinyin or text');
+      this.searchEl.placeholder = ph;
+      this.searchEl.setAttribute('aria-label', ph);
       this.searchEl.value = this.query;
     }
     this.applyFilter();
     this.updateCount();
   };
 
-  /** 过滤：中文名 / 英文名 / 拼音全拼 / 拼音首字母，再叠加分类与年代 */
+  /**
+   * 过滤规则只有一份：GG.search.match（js/search.js）。
+   * 命中分四级，同组内按 score 重排，模糊结果加 .fuzzy 标记。
+   */
   UI.prototype.applyFilter = function () {
     const q = this.query;
+    const all = [...this.listEl.querySelectorAll('.li')];
+    const hits = new Map();
     let shown = 0;
-    for (const li of this.listEl.querySelectorAll('.li')) {
-      const d = li.dataset;
-      const textHit = !q
-        || d.name.toLowerCase().includes(q)
-        || (d.en || '').toLowerCase().includes(q)
-        || (d.py || '').includes(q)
-        || (d.pyi || '').includes(q);
-      const catHit = !this.filterCat || d.cat === this.filterCat;
-      const eraHit = !this.filterEra || (d.year || '').includes(this.filterEra);
-      const match = textHit && catHit && eraHit;
-      li.classList.toggle('hidden', !match);
-      if (match) shown++;
+    for (const li of all) {
+      const r = GG.search.match(li.__info, q, this.filterCat, this.filterEra);
+      hits.set(li, r);
+      li.classList.toggle('hidden', !r);
+      li.classList.toggle('fuzzy', !!r && r.score >= 2);
+      if (r) shown++;
     }
+    if (q) this._sortGroups(hits);
+
     for (const g of this.listEl.querySelectorAll('.li-group')) {
       let el = g.nextElementSibling;
       let any = false;
@@ -173,7 +185,46 @@
       }
       g.classList.toggle('hidden', !any);
     }
+    /* 重排后「上一座 / 下一座」要跟着新的可见顺序走 */
+    this.items = [...this.listEl.querySelectorAll('.li')]
+      .map((li) => this.byName.get(li.dataset.name))
+      .filter(Boolean);
+
     if (this.noResultEl) this.noResultEl.hidden = shown > 0;
+    if (this.statusEl) {
+      this.statusEl.textContent = q
+        ? GG.i18n.t('找到 ' + shown + ' 条', shown + ' found')
+        : '';
+    }
+    /* 标签层据此高亮搜索命中的建筑；空查询时全部清除 */
+    document.dispatchEvent(new CustomEvent('gg:filter', {
+      detail: {
+        active: !!q,
+        names: new Set(all.filter((li) => hits.get(li)).map((li) => li.dataset.name))
+      }
+    }));
+  };
+
+  /** 组内按命中等级重排；组标题不动，跨组顺序不动 */
+  UI.prototype._sortGroups = function (hits) {
+    const groups = [...this.listEl.querySelectorAll('.li-group')];
+    groups.forEach((g, gi) => {
+      const nextGroup = groups[gi + 1] || null;
+      const lis = [];
+      let el = g.nextElementSibling;
+      while (el && el !== nextGroup) {
+        if (el.classList && el.classList.contains('li')) lis.push(el);
+        el = el.nextElementSibling;
+      }
+      lis.sort((a, b) => {
+        const ra = hits.get(a), rb = hits.get(b);
+        return (ra ? ra.score : 9) - (rb ? rb.score : 9);
+      });
+      for (const li of lis) {
+        if (nextGroup) this.listEl.insertBefore(li, nextGroup);
+        else this.listEl.appendChild(li);
+      }
+    });
   };
 
   /** 已阅计数：只统计当前场景里有实体的词条 */

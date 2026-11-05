@@ -26,7 +26,7 @@
 
 ```
 debug → config → i18n → three → sky → water → weather → orbit → renderer
-      → views → labels → picking → ui → tour → textures → geo → buildings → tiantan → city
+      → views → labels → picking → search → a11y → ui → tour → textures → geo → buildings → tiantan → city
       → data/info → data/tour → data/quests → data/eras → quests → eras → fps → palace → app
 ```
 
@@ -47,9 +47,11 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 | `orbit.js` | 球坐标轨道控制、阻尼、触控、平移 | `GG.Orbit`、`syncFromCamera()` |
 | `renderer.js` | 渲染器、相机、环境贴图、光照、雾、`setSun(t)` | `GG.Stage` |
 | `views.js` | 从 `GG.CONFIG.views` 生成按钮，管理飞行与落位 | `GG.Views`（`set` / `applyInstant` / `flyTo`） |
-| `labels.js` | 标签 DOM、投影、避让、优先级过滤 | `GG.Labels`（`build` / `update` / `invalidate`） |
+| `labels.js` | 标签 DOM、投影、避让、优先级过滤；分组跳转与搜索命中高亮 | `GG.Labels`（`build` / `update` / `invalidate` / `setGroup` / `setMatches`） |
 | `picking.js` | Raycaster 拾取、悬停高亮、地面光圈 | `GG.Picker`（`pickAt` / `setHover`） |
-| `ui.js` | 侧栏索引（搜索 / 分类 / 年代 / 已阅）、信息卡与互链；`markVisited` 派发 `gg:visited` | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited` / `hasVisited`） |
+| `search.js` | 搜索命中纯函数：标题 / 正文 / 模糊音 / 错字容错，返回四级 score | `GG.search`（`norm` / `near` / `fuzzyIncludes` / `match`） |
+| `a11y.js` | 屏幕阅读器播报与画布文本摘要，只碰两块 sr-only DOM | `GG.a11y`（`announce` / `sceneAlt`） |
+| `ui.js` | 侧栏索引（搜索 / 分类 / 年代 / 已阅）、信息卡与互链；派发 `gg:visited` 与 `gg:filter` | `GG.UI`（`build` / `show` / `hide` / `refresh` / `markVisited` / `hasVisited` / `applyFilter`） |
 | `tour.js` | 导览播放器：多路线切换、换站、暂停、字幕 | `GG.Tour`（`start` / `setRoute` / `next` / `prev` / `stop`） |
 | `textures.js` | 生成并缓存全部贴图 | `GG.getTextures()`、`GG.getPlaque(text)` |
 | `geo.js` | 几何生成原语，不碰材质 | `GG.geo.{ roofGeometry, gableGeometry, ridgeGeometry, terraceGeometry, railingGeometry, stairsGeometry, columnRing, dougongRing, fitUV, merge, box, xform, mergeGroup, optimizeStatics, mergeWorldStatics, lerp }` |
@@ -57,14 +59,14 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 | `tiantan.js` | 天坛（清乾隆十九年格局）：坛墙、祈谷坛、圜丘坛、皇穹宇、斋宫、神乐署、柏林 | `GG.tiantan.{ build, footprintPath, stats }` |
 | `city.js` | 宫城之外的京师：皇城 / 内城 / 外城城墙与城门、先农坛、北海、中南海、胡同院落与夜灯 | `GG.city`（`build(scene, reg)` / `treeSpots` / `stats`） |
 | `data/info.js` | 建筑词条（纯数据） | `GG.INFO` |
-| `data/tour.js` | 导览路线与中英字幕（纯数据） | `GG.TOUR` |
-| `data/quests.js` | 探索清单：三组 27 项，只存 info key（纯数据） | `GG.QUESTS` |
+| `data/tour.js` | 5 条导览路线 / 59 站与中英字幕（纯数据） | `GG.TOUR` |
+| `data/quests.js` | 探索清单：6 组 59 项，只存 info key（纯数据） | `GG.QUESTS` |
 | `data/eras.js` | 明清差异：8 处，含年代标注、双语说明与依据（纯数据） | `GG.ERAS` |
 | `quests.js` | 清单面板：进度计算、就地刷新勾选、一次性完成提示 | `GG.Quests`（`open` / `close` / `toggle` / `refresh` / `progress`） |
 | `eras.js` | 朝代面板：tab 切换、差异清单、信息卡注记供稿 | `GG.Eras`（`set` / `open` / `close` / `noteFor`） |
 | `fps.js` | 第一人称：WASD、Pointer Lock / 拖拽转头、包围盒碰撞、抬头看匾、退出反算 orbit | `GG.FPS`（`enter` / `exit` / `update` / `anchor` / `blocked`） |
 | `palace.js` | 总平面布置，内部按区域拆成五段函数 | `GG.layout(scene)`、`GG.REGISTRY` |
-| `app.js` | 编排初始化与主循环，自执行；`window.__dbg` 暴露全部子系统 | 无导出 |
+| `app.js` | 编排初始化与主循环，自执行；分组键位 / 分享深链 / 画布摘要 / `window.__dbg` | 无导出 |
 
 ### 两套相机状态（v2.4）
 
@@ -139,7 +141,12 @@ debug → config → i18n → three → sky → water → weather → orbit → 
 6. **不用 ES Module**：`file://` 下会因 CORS 失效。新模块继续 IIFE 挂 `window.GG`。
 7. **可调参数进配置**：颜色、曝光、光照强度、标签阈值、机位、第一人称参数都放 `GG.CONFIG`（漫游在 `CONFIG.fps`）。
 8. **玩法边界**：完成条件是「看到即完成」（打开词条、走到某位置），判定复用 `ui.hasVisited()`；需要累积、比较、刷取或排行的是游戏化，不做。朝代对比只切说明文字，不改几何。
-9. **形制按等级分档**，不要一处一套写法：
+9. **搜索规则只有一份**：命中判定全在 `js/search.js` 的 `GG.search.match`，`ui.js` 与 `tools/search-check.js` 共用；
+   禁止在断言脚本或第二个界面里复制匹配逻辑。标注分组顺序只有 `CONFIG.label.groups` 一份，按钮 / `[` `]` / `?labelgroup=` 都从它推导。
+10. **引导数据只认词条名**：导览 `stops[].target` 必须等于 `info.name`，清单 `items` 必须是 info key；
+    区域词条「御花园」没有场景实体，写进任何一条都会变成点开是空卡（`search-check.js` 会拦）。
+    新增站点的字幕只复述 `info.js` 已有正文，不另写一套史料。
+11. **形制按等级分档**，不要一处一套写法：
 
 | 项 | 高等级（三大殿 / 中轴门楼） | 次等级 | 实现位置 |
 | --- | --- | --- | --- |

@@ -143,6 +143,207 @@
             en: 'We end at the Pavilion of Ten Thousand Springs in the Imperial Garden. The consorts’ world was divided into walled cells; this garden was the one place they shared.'
           }
         ]
+      },
+
+      /* v2.5：东路、西路、京师三条线，接住原先没有引导入口的词条。
+         字幕只复述 info.js 的正文，不新增史实与尺寸。 */
+      {
+        id: 'east',
+        title: { zh: '东路导览 · 文华与宁寿', en: 'The Eastern Route' },
+        short: { zh: '东路', en: 'East' },
+        stops: [
+          {
+            target: '文华殿', dwell: 8000,
+            zh: '从三大殿广场折向东，第一站是文华殿。明代为太子讲学之所，清代经筵典礼在此举行。',
+            en: 'East of the main court stands the Hall of Literary Glory: a Ming prince’s schoolroom, later the Qing venue for the Classics Colloquium.'
+          },
+          {
+            target: '文渊阁', dwell: 9000,
+            zh: '殿后文渊阁，乾隆四十一年为收藏《四库全书》而建。仿宁波天一阁，黑瓦主水以克火。',
+            en: 'Behind it, the Wenyuan Pavilion was built in 1776 to house the Complete Library of the Four Treasuries; its black tiles evoke water against fire.'
+          },
+          {
+            target: '奉先殿', dwell: 8000,
+            zh: '奉先殿是宫内的皇家祖庙，供奉明清两代帝后神位，四时致祭。',
+            en: 'The Hall of Ancestral Worship served as the imperial family shrine, holding the spirit tablets of Ming and Qing emperors.'
+          },
+          {
+            target: '箭亭', dwell: 8000,
+            zh: '箭亭四面开门而不设窗墙，便于驰马放箭，是清廷保持骑射传统而设的建筑。',
+            en: 'Open on all four sides for riding and archery, the Arrow Pavilion embodies the Qing effort to preserve mounted skills.'
+          },
+          {
+            target: '毓庆宫', dwell: 8000,
+            zh: '毓庆宫康熙年间为皇太子所建，后来定为皇子读书、居住之所。',
+            en: 'Built for a crown prince under Kangxi, this palace became the schoolroom and residence of imperial sons.'
+          },
+          {
+            target: '南三所', dwell: 8000,
+            zh: '南三所因屋顶覆绿琉璃瓦俗称「阿哥所」，三所院落并排，是清代皇子成长起居之处。',
+            en: 'Three parallel compounds with green glazed roofs, the Southern Three Lodges housed Qing princes; their colour earned them the name “Age lodges”.'
+          },
+          {
+            target: '皇极殿', dwell: 9000,
+            zh: '皇极殿是宁寿宫区正殿，乾隆为退位后的太上皇生活预建，嘉庆元年在此举行千叟宴。',
+            en: 'The chief hall of the Ningshou compound, built in advance for the Qianlong Emperor’s retirement; it hosted the Banquet of a Thousand Elders.'
+          },
+          {
+            target: '宁寿宫', dwell: 8000,
+            zh: '宁寿宫经乾隆三十七年改建，成为太上皇的起居院落，其后养性殿、乐寿堂依次排列。',
+            en: 'Rebuilt in 1772 as a retired emperor’s residence, with the halls behind it arranged in sequence.'
+          },
+          {
+            target: '养性殿', dwell: 8000,
+            zh: '养性殿是宁寿宫区生活区正殿，形制仿养心殿而建，陈设按皇帝日常起居布置。',
+            en: 'Modelled on the Hall of Mental Cultivation, this was the main living hall of the Ningshou quarter.'
+          },
+          {
+            target: '乐寿堂', dwell: 8000,
+            zh: '乐寿堂在清末是慈禧太后驻园时的寝宫，堂前设庭院与花木。',
+            en: 'In the late Qing this was Empress Dowager Cixi’s sleeping quarters, fronted by a planted courtyard.'
+          },
+          {
+            target: '畅音阁', dwell: 9000,
+            zh: '畅音阁是三层大戏台，台上设天井、地井可作升降布景，是宫内保存最完整的宫廷戏台。',
+            en: 'A three-storey court theatre with ceiling and floor openings for flying scenery—the best preserved of its kind in the palace.'
+          },
+          {
+            target: '符望阁', dwell: 9000,
+            zh: '最后一站符望阁，乾隆花园的主建筑，位于园中高处，凭栏可望紫禁城内外。',
+            en: 'We finish at the Pavilion of Fulfilled Hopes, the high point of the Qianlong Garden, looking out over the palace.'
+          }
+        ]
+      },
+
+      {
+        id: 'west',
+        title: { zh: '西路导览 · 武英与慈宁', en: 'The Western Route' },
+        short: { zh: '西路', en: 'West' },
+        stops: [
+          {
+            target: '武英殿', dwell: 8000,
+            zh: '西路从武英殿开始。清代设修书处于此，所刻「殿本」以纸墨精良、校勘严谨著称。',
+            en: 'The western route opens at the Hall of Martial Valour, seat of the Qing imperial printing office famed for its “palace editions”.'
+          },
+          {
+            target: '浴德堂', dwell: 8000,
+            zh: '殿后浴德堂设穹顶浴室，是紫禁城中罕见的阿拉伯式建筑。',
+            en: 'Behind it, a small hall with a domed bath chamber—a rare Arabic-influenced structure in the Forbidden City.'
+          },
+          {
+            target: '南薰殿', dwell: 8000,
+            zh: '南薰殿取《诗经》「南风之薰」之意，清代专藏历代帝王后妃画像。',
+            en: 'Named from the Book of Songs, this small hall stored the Qing collection of imperial portraits.'
+          },
+          {
+            target: '咸安宫', dwell: 8000,
+            zh: '咸安宫明代为太后、太妃居所，清代曾设官学，选八旗子弟入学肄业。',
+            en: 'A Ming residence for dowagers, later the site of a Qing school for Banner sons.'
+          },
+          {
+            target: '内务府', dwell: 8000,
+            zh: '内务府总管皇室财政与宫禁事务，宫中吃穿用度、营造修缮无不由其经办。',
+            en: 'The Imperial Household Department ran the court’s finances, supplies, building works and daily ceremonies.'
+          },
+          {
+            target: '养心殿', dwell: 10000,
+            zh: '雍正帝由乾清宫移居养心殿，此后八位皇帝沿袭，这里成为清代中后期实际的寝宫与理政之所。',
+            en: 'From the Yongzheng Emperor onward eight rulers lived and governed here, making it the real centre of the late Qing court.'
+          },
+          {
+            target: '慈宁宫', dwell: 9000,
+            zh: '慈宁宫是明清两代皇太后的居所，清初孝庄文皇后曾长居于此。',
+            en: 'The residence of empress dowagers in both dynasties; the early Qing dowager Xiaozhuang lived here for years.'
+          },
+          {
+            target: '寿康宫', dwell: 8000,
+            zh: '寿康宫是乾隆帝为母亲崇庆皇太后所建，前后两进，是清代太后颐养天年的典型院落。',
+            en: 'Built by Qianlong for his mother, its two courtyards typify a Qing dowager’s retirement residence.'
+          },
+          {
+            target: '寿安宫', dwell: 8000,
+            zh: '寿安宫明代为咸安宫，乾隆为皇太后受贺改建更名，前有戏台，三进院落相连。',
+            en: 'Renamed and rebuilt for a dowager’s birthday celebrations, with a stage in front and three linked courts.'
+          },
+          {
+            target: '临溪亭', dwell: 8000,
+            zh: '慈宁宫花园中心的临溪亭跨于池上，是太后太妃礼佛之余游赏之所。',
+            en: 'A waterside pavilion at the heart of the Cining garden, where dowagers rested after their devotions.'
+          },
+          {
+            target: '英华殿', dwell: 9000,
+            zh: '最后一站英华殿，明清太后、太妃礼佛之所，殿前原有两株菩提树。',
+            en: 'We end at the Hall of Flowering Glory, a Buddhist chapel for dowagers, once shaded by two bodhi trees.'
+          }
+        ]
+      },
+
+      {
+        id: 'outer',
+        title: { zh: '京师导览 · 坛庙与城阙', en: 'The Capital Beyond' },
+        short: { zh: '京师', en: 'Capital' },
+        stops: [
+          {
+            target: '端门', dwell: 8000,
+            zh: '从午门向南，先过端门。城台上建重檐殿宇，是紫禁城正门的第一重。',
+            en: 'South of the Meridian Gate, the Upright Gate is the first of the ceremonial gates, its tower close in form to the Meridian Gate.'
+          },
+          {
+            target: '天安门', dwell: 9000,
+            zh: '天安门是皇城正门，城台开五门，前有华表、石狮与金水桥。',
+            en: 'The main gate of the Imperial City: five openings beneath a double-eaved tower, fronted by columns, lions and the Golden Water Bridges.'
+          },
+          {
+            target: '太庙', dwell: 8000,
+            zh: '太庙在御路东侧，是明清皇帝祭祖的宗庙，与社稷坛构成「左祖右社」。',
+            en: 'East of the imperial way, the Ancestral Temple pairs with the Altar of Land and Grain to express the “ancestors left, soil right” rite.'
+          },
+          {
+            target: '社稷坛', dwell: 8000,
+            zh: '社稷坛与太庙东西对置，坛面按东青、南赤、中黄、西白、北黑五方铺土。',
+            en: 'Opposite the Ancestral Temple, its surface is laid with five coloured soils for the five directions.'
+          },
+          {
+            target: '景山', dwell: 9000,
+            zh: '景山在神武门正北，明代称万岁山，五峰东西排列，中峰是全城的制高点。',
+            en: 'North of the palace, five artificial peaks form the city’s highest point; in Ming times it was called Wansui Hill.'
+          },
+          {
+            target: '寿皇殿', dwell: 8000,
+            zh: '寿皇殿在景山东麓，供奉清代帝后御容，是景山建筑群中等级最高者。',
+            en: 'On the hill’s eastern slope, this hall held Qing imperial portraits and outranked the rest of the Jingshan complex.'
+          },
+          {
+            target: '北海', dwell: 8000,
+            zh: '北海自辽金以来即为御苑，以琼华岛上的白塔为标志。',
+            en: 'An imperial garden since the Liao and Jin, marked by the White Dagoba on Qionghua Island.'
+          },
+          {
+            target: '中南海', dwell: 8000,
+            zh: '中南海与北海一脉相连，同属皇城西苑。此处为示意复原，非现状。',
+            en: 'Joined to Beihai as part of the western imperial gardens; shown here as an indicative reconstruction.'
+          },
+          {
+            target: '天坛', dwell: 10000,
+            zh: '转到外城，天坛是明清两代祭天、祈谷之所，坛域北圆南方，象天法地。',
+            en: 'In the outer city, the Temple of Heaven served the Ming and Qing sacrifices to Heaven and prayers for harvest; its plan is round north, square south.'
+          },
+          {
+            target: '圜丘', dwell: 9000,
+            zh: '圜丘是冬至祭天之所，坛面以天心石为心，铺扇面石九圈，每圈都是九的倍数。',
+            en: 'The winter-solstice altar: nine concentric rings of fan-shaped stones, every count a multiple of nine.'
+          },
+          {
+            target: '皇穹宇', dwell: 8000,
+            zh: '皇穹宇平日供奉祭天神牌，外围圆墙磨砖对缝，声波沿壁传递，俗称回音壁。',
+            en: 'The shrine storing the sacrificial tablets; its finely jointed circular wall carries sound and is known as the Echo Wall.'
+          },
+          {
+            target: '先农坛', dwell: 9000,
+            zh: '最后一站先农坛，明清皇帝每年仲春在此亲耕三推，以示重农。',
+            en: 'We finish at the Altar of the First Farmer, where emperors ploughed three furrows each spring to honour agriculture.'
+          }
+        ]
       }
     ]
   };
